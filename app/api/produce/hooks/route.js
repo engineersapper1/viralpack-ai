@@ -2,7 +2,7 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const PRODUCER_URL = process.env.PRODUCER_URL; // http://127.0.0.1:8000
+    const PRODUCER_URL = process.env.PRODUCER_URL; // e.g. http://127.0.0.1:8000
     if (!PRODUCER_URL) {
       return Response.json({ ok: false, error: "Missing PRODUCER_URL" }, { status: 500 });
     }
@@ -17,14 +17,21 @@ export async function POST(req) {
 
     if (!upstream.ok) {
       return Response.json(
-        { ok: false, error: data?.detail || data?.error || "Producer request failed" },
+        { ok: false, error: data?.detail || data?.error || "Producer request failed", raw: data },
         { status: upstream.status }
       );
     }
 
-    const assets = data?.assets || data?.hooks_pack?.assets || [];
-    return Response.json({ ok: true, assets });
+    // Expected python shape: { schema_version, trends, hooks_pack }
+    const hooksPack = data?.hooks_pack ?? data;
+
+    return Response.json({
+      ok: true,
+      schema_version: data?.schema_version,
+      trends: data?.trends,
+      hooks_pack: hooksPack,
+    });
   } catch (e) {
-    return Response.json({ ok: false, error: "Bad request" }, { status: 400 });
+    return Response.json({ ok: false, error: String(e) }, { status: 400 });
   }
 }
