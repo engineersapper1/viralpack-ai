@@ -40,7 +40,11 @@ export default function Page() {
     <div className="container">
       <div className="nav">
         <div className="brand">
-          <div className="logo" aria-hidden="true" />
+          <img
+            src="/logo.png"
+            alt="ViralPack.ai"
+            style={{ width: 38, height: 38, borderRadius: 10 }}
+    />
           <div>
             <h1>ViralPack.ai</h1>
             <div className="badge">Landing, Beta soon</div>
