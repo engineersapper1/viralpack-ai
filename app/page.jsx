@@ -5,6 +5,10 @@ import { useMemo, useState } from "react";
 export default function Page() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState({ type: "", msg: "" });
+  const [assets, setAssets] = useState([]);
+  const [genStatus, setGenStatus] = useState({ type: "", msg: "" });
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const year = useMemo(() => new Date().getFullYear(), []);
 
   async function submitWaitlist(e) {
@@ -36,15 +40,47 @@ export default function Page() {
     }
   }
 
+  async function generateHooks() {
+    setGenStatus({ type: "", msg: "" });
+    setIsGenerating(true);
+    setAssets([]);
+
+    try {
+      const res = await fetch("/api/produce/hooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand_name: "ViralPack.ai",
+          product: "SaaS that generates short-form hooks and content concepts",
+          offer: "Early access waitlist",
+          website: "https://viralpack.ai",
+          market: "Creators, agencies, small businesses",
+        }),
+      });
+
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || "Producer request failed");
+
+      const list = Array.isArray(j?.assets) ? j.assets : [];
+      setAssets(list);
+
+      if (!list.length) {
+        setGenStatus({ type: "err", msg: "Producer returned no assets. Check Producer logs." });
+      } else {
+        setGenStatus({ type: "ok", msg: `Generated ${list.length} assets.` });
+      }
+    } catch (err) {
+      setGenStatus({ type: "err", msg: "Couldn’t generate right now. Make sure Producer is running." });
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   return (
     <div className="container">
       <div className="nav">
         <div className="brand">
-          <img
-            src="/logo.png"
-            alt="ViralPack.ai"
-            style={{ width: 38, height: 38, borderRadius: 10 }}
-          />
+          <img src="/logo.png" alt="ViralPack.ai" style={{ width: 38, height: 38, borderRadius: 10 }} />
           <div>
             <h1>ViralPack.ai</h1>
             <div className="badge">Landing, Beta soon</div>
@@ -84,6 +120,47 @@ export default function Page() {
             </div>
 
             <p className="smallNote">No install. Runs online. Pay-to-play coming after beta.</p>
+
+            <hr className="hr" style={{ marginTop: 16 }} />
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button className="btn btnPrimary" type="button" onClick={generateHooks} disabled={isGenerating}>
+                {isGenerating ? "Generating..." : "Test Producer (Generate hooks)"}
+              </button>
+              <span className="smallNote" style={{ margin: 0 }}>
+                Local dev only, uses /api/produce/hooks.
+              </span>
+            </div>
+
+            {genStatus.type === "ok" && <div className="toastOk">{genStatus.msg}</div>}
+            {genStatus.type === "err" && <div className="toastErr">{genStatus.msg}</div>}
+
+            {assets.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <h3 style={{ margin: "12px 0 8px", fontSize: 16 }}>Top Hooks (Live Producer Output)</h3>
+                <div className="exampleBox">
+                  <div className="mono">
+                    {assets.slice(0, 10).map((a, idx) => (
+                      <div key={idx} style={{ marginBottom: 12 }}>
+                        <div>
+                          <strong>{idx + 1}) Hook:</strong> {a.hook}
+                        </div>
+                        <div>
+                          <strong>Overlay:</strong> {a.on_screen_overlay}
+                        </div>
+                        <div>
+                          <strong>Caption:</strong> {a.caption}
+                        </div>
+                        <div>
+                          <strong>Hashtags:</strong>{" "}
+                          {Array.isArray(a.hashtags) ? a.hashtags.join(" ") : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card">
