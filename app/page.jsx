@@ -5,11 +5,27 @@ import { useMemo, useState } from "react";
 export default function Page() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState({ type: "", msg: "" });
-  const [assets, setAssets] = useState([]);
-  const [genStatus, setGenStatus] = useState({ type: "", msg: "" });
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const year = useMemo(() => new Date().getFullYear(), []);
+
+  // Editable Producer inputs
+  const [form, setForm] = useState({
+    brand_name: "ViralPack.ai",
+    product: "SaaS that generates short-form hooks and content concepts",
+    offer: "Early access waitlist",
+    website: "https://viralpack.ai",
+    market: "Creators, agencies, small businesses",
+  });
+
+  // Top K controls
+  const [topOnly, setTopOnly] = useState(true); // if true, request/trim to top 5
+  const TOP_K = 5;
+
+  // Producer tester state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genMsg, setGenMsg] = useState("");
+  const [genErr, setGenErr] = useState("");
+  const [assets, setAssets] = useState([]); // array of concept objects
+  const [lastResponse, setLastResponse] = useState(null); // raw response for JSON export metadata
 
   async function submitWaitlist(e) {
     e.preventDefault();
@@ -40,47 +56,197 @@ export default function Page() {
     }
   }
 
-  async function generateHooks() {
-    setGenStatus({ type: "", msg: "" });
-    setIsGenerating(true);
-    setAssets([]);
+  function safeText(v) {
+    if (v === null || v === undefined) return "";
+    return String(v);
+  }
+
+  function clampTopK(list, k) {
+    if (!Array.isArray(list)) return [];
+    if (!k || k <= 0) return list;
+    return list.slice(0, k);
+  }
+
+  async function copyText(text) {
+    const t = safeText(text).trim();
+    if (!t) return;
 
     try {
-      const res = await fetch("/api/produce/hooks", {
+      await navigator.clipboard.writeText(t);
+      setGenMsg("Copied to clipboard.");
+      setTimeout(() => setGenMsg(""), 1200);
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+        setGenMsg("Copied to clipboard.");
+        setTimeout(() => setGenMsg(""), 1200);
+      } catch (err) {
+        setGenErr("Copy failed in this browser.");
+        setTimeout(() => setGenErr(""), 2000);
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+  }
+
+  function buildPackText(list) {
+    const lines = [];
+    lines.push("ViralPack.ai, Producer Test Output");
+    lines.push(`Generated: ${new Date().toISOString()}`);
+    lines.push("");
+    lines.push("INPUTS");
+    lines.push(`brand_name: ${safeText(form.brand_name)}`);
+    lines.push(`product: ${safeText(form.product)}`);
+    lines.push(`offer: ${safeText(form.offer)}`);
+    lines.push(`website: ${safeText(form.website)}`);
+    lines.push(`market: ${safeText(form.market)}`);
+    lines.push(`top_k: ${topOnly ? TOP_K : "none"}`);
+    lines.push("");
+    lines.push("============================================================");
+    lines.push("");
+
+    (list || []).forEach((a, idx) => {
+      const n = idx + 1;
+      const conceptTitle = a?.concept_title || a?.title || "Untitled";
+
+      lines.push(`CONCEPT ${n}, ${conceptTitle}`);
+      lines.push("");
+      lines.push("TOP HOOK");
+      lines.push(safeText(a?.hook));
+      lines.push("");
+      lines.push("ON SCREEN OVERLAY");
+      lines.push(safeText(a?.on_screen_overlay));
+      lines.push("");
+      lines.push("CAPTION");
+      lines.push(safeText(a?.caption));
+      lines.push("");
+      lines.push("HASHTAGS");
+      const tags = Array.isArray(a?.hashtags) ? a.hashtags : [];
+      lines.push(tags.join(" "));
+      lines.push("");
+      lines.push("------------------------------------------------------------");
+      lines.push("");
+    });
+
+    return lines.join("\n");
+  }
+
+  function downloadFile(filename, content, mime) {
+    const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportTxt() {
+    const txt = buildPackText(assets);
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadFile(`viralpack-pack-${stamp}.txt`, txt, "text/plain;charset=utf-8");
+  }
+
+  // Stable, versioned JSON export wrapper (future-proof)
+  function buildExportJson() {
+    const stamp = new Date().toISOString();
+    return {
+      schema_version: "vp_pack_export_v1",
+      generated_at: stamp,
+      request: {
+        schema_version: "vp_request_v1",
+        ...form,
+        top_k: topOnly ? TOP_K : null,
+      },
+      response: {
+        schema_version: "vp_response_v1",
+        upstream: {
+          schema_version: safeText(lastResponse?.schema_version || ""),
+        },
+        assets: assets,
+      },
+    };
+  }
+
+  function exportJson() {
+    const obj = buildExportJson();
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadFile(`viralpack-pack-${stamp}.json`, JSON.stringify(obj, null, 2), "application/json;charset=utf-8");
+  }
+
+  async function generateHooks() {
+    if (isGenerating) return;
+
+    setIsGenerating(true);
+    setGenErr("");
+    setGenMsg("Generating, please wait…");
+    setAssets([]);
+    setLastResponse(null);
+
+    try {
+      // Send editable inputs + optional top_k
+      const payload = {
+        ...form,
+        ...(topOnly ? { top_k: TOP_K } : {}),
+      };
+
+      const r = await fetch("/api/produce/hooks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand_name: "ViralPack.ai",
-          product: "SaaS that generates short-form hooks and content concepts",
-          offer: "Early access waitlist",
-          website: "https://viralpack.ai",
-          market: "Creators, agencies, small businesses",
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error || "Producer request failed");
+      const data = await r.json().catch(() => null);
 
-      const list = Array.isArray(j?.assets) ? j.assets : [];
-      setAssets(list);
-
-      if (!list.length) {
-        setGenStatus({ type: "err", msg: "Producer returned no assets. Check Producer logs." });
-      } else {
-        setGenStatus({ type: "ok", msg: `Generated ${list.length} assets.` });
+      if (!r.ok) {
+        const msg = data?.error || data?.detail || "Producer request failed";
+        throw new Error(msg);
       }
-    } catch (err) {
-      setGenStatus({ type: "err", msg: "Couldn’t generate right now. Make sure Producer is running." });
+
+      setLastResponse(data);
+
+      // Accept either { assets: [...] } OR { hooks_pack: { assets: [...] } }
+      const rawList = Array.isArray(data?.assets)
+        ? data.assets
+        : Array.isArray(data?.hooks_pack?.assets)
+        ? data.hooks_pack.assets
+        : [];
+
+      // Safety trim client-side too
+      const list = topOnly ? clampTopK(rawList, TOP_K) : rawList;
+
+      setAssets(list);
+      setGenMsg(list.length ? `Generated ${list.length} concepts.` : "No concepts returned.");
+    } catch (e) {
+      setGenErr(e?.message || "Couldn’t generate right now. Make sure Producer is running.");
+      setGenMsg("");
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  function onChangeField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   return (
     <div className="container">
       <div className="nav">
         <div className="brand">
-          <img src="/logo.png" alt="ViralPack.ai" style={{ width: 38, height: 38, borderRadius: 10 }} />
+          <img
+            src="/logo.png"
+            alt="ViralPack.ai"
+            style={{ width: 38, height: 38, borderRadius: 10 }}
+          />
           <div>
             <h1>ViralPack.ai</h1>
             <div className="badge">Landing, Beta soon</div>
@@ -121,46 +287,232 @@ export default function Page() {
 
             <p className="smallNote">No install. Runs online. Pay-to-play coming after beta.</p>
 
-            <hr className="hr" style={{ marginTop: 16 }} />
+            {/* Editable inputs */}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
+                  <Field
+                    label="Brand name"
+                    value={form.brand_name}
+                    onChange={(v) => onChangeField("brand_name", v)}
+                    placeholder="ViralPack.ai"
+                  />
+                  <Field
+                    label="Website"
+                    value={form.website}
+                    onChange={(v) => onChangeField("website", v)}
+                    placeholder="https://viralpack.ai"
+                  />
+                </div>
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <button className="btn btnPrimary" type="button" onClick={generateHooks} disabled={isGenerating}>
-                {isGenerating ? "Generating..." : "Test Producer (Generate hooks)"}
-              </button>
-              <span className="smallNote" style={{ margin: 0 }}>
-                Local dev only, uses /api/produce/hooks.
-              </span>
-            </div>
+                <Field
+                  label="Product"
+                  value={form.product}
+                  onChange={(v) => onChangeField("product", v)}
+                  placeholder="What are you selling?"
+                />
+                <Field
+                  label="Offer"
+                  value={form.offer}
+                  onChange={(v) => onChangeField("offer", v)}
+                  placeholder="Early access waitlist"
+                />
+                <Field
+                  label="Market"
+                  value={form.market}
+                  onChange={(v) => onChangeField("market", v)}
+                  placeholder="Creators, agencies, small businesses"
+                />
 
-            {genStatus.type === "ok" && <div className="toastOk">{genStatus.msg}</div>}
-            {genStatus.type === "err" && <div className="toastErr">{genStatus.msg}</div>}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={topOnly}
+                      onChange={(e) => setTopOnly(e.target.checked)}
+                      disabled={isGenerating}
+                    />
+                    <span className="smallNote" style={{ margin: 0 }}>
+                      Return top {TOP_K} only
+                    </span>
+                  </label>
 
-            {assets.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <h3 style={{ margin: "12px 0 8px", fontSize: 16 }}>Top Hooks (Live Producer Output)</h3>
-                <div className="exampleBox">
-                  <div className="mono">
-                    {assets.slice(0, 10).map((a, idx) => (
-                      <div key={idx} style={{ marginBottom: 12 }}>
-                        <div>
-                          <strong>{idx + 1}) Hook:</strong> {a.hook}
-                        </div>
-                        <div>
-                          <strong>Overlay:</strong> {a.on_screen_overlay}
-                        </div>
-                        <div>
-                          <strong>Caption:</strong> {a.caption}
-                        </div>
-                        <div>
-                          <strong>Hashtags:</strong>{" "}
-                          {Array.isArray(a.hashtags) ? a.hashtags.join(" ") : ""}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="smallNote" style={{ margin: 0 }}>
+                    Local dev only, uses <span className="mono">/api/produce/hooks</span>.
                   </div>
                 </div>
+
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <button
+                    className="btn btnPrimary"
+                    onClick={generateHooks}
+                    disabled={isGenerating}
+                    aria-busy={isGenerating ? "true" : "false"}
+                    title="Generate from local Producer"
+                  >
+                    {isGenerating ? "Generating…" : "Generate"}
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={() => copyText(buildPackText(assets))}
+                    disabled={!assets.length || isGenerating}
+                    title="Copy the full generated pack as text."
+                  >
+                    Copy full pack
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={exportTxt}
+                    disabled={!assets.length || isGenerating}
+                    title="Download a .txt file of the generated pack."
+                  >
+                    Export .txt
+                  </button>
+
+                  <button
+                    className="btn"
+                    onClick={exportJson}
+                    disabled={!assets.length || isGenerating}
+                    title="Download a versioned JSON export for future compatibility."
+                  >
+                    Export JSON
+                  </button>
+                </div>
+
+                {genMsg ? (
+                  <div className="toastOk" style={{ marginTop: 6 }}>
+                    {genMsg} {isGenerating ? <span className="mono">⏳</span> : null}
+                  </div>
+                ) : null}
+
+                {genErr ? (
+                  <div className="toastErr" style={{ marginTop: 6 }}>
+                    {genErr}
+                  </div>
+                ) : null}
               </div>
-            )}
+
+              {/* Results */}
+              {assets.length ? (
+                <div style={{ marginTop: 14 }}>
+                  <div className="exampleBox" style={{ marginTop: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ fontWeight: 800 }}>Generated Concepts</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button className="btn" onClick={() => copyText(buildPackText(assets))}>
+                          Copy all
+                        </button>
+                        <button className="btn" onClick={exportTxt}>
+                          Export .txt
+                        </button>
+                        <button className="btn" onClick={exportJson}>
+                          Export JSON
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                      {assets.map((a, i) => {
+                        const tags = Array.isArray(a?.hashtags) ? a.hashtags : [];
+                        const conceptTitle = a?.concept_title || a?.title || "Untitled";
+
+                        const sectionHook = safeText(a?.hook);
+                        const sectionOverlay = safeText(a?.on_screen_overlay);
+                        const sectionCaption = safeText(a?.caption);
+                        const sectionTags = tags.join(" ");
+
+                        const conceptText =
+                          [
+                            `CONCEPT ${i + 1}, ${conceptTitle}`,
+                            "",
+                            "TOP HOOK",
+                            sectionHook,
+                            "",
+                            "ON SCREEN OVERLAY",
+                            sectionOverlay,
+                            "",
+                            "CAPTION",
+                            sectionCaption,
+                            "",
+                            "HASHTAGS",
+                            sectionTags,
+                          ].join("\n");
+
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              border: "1px solid rgba(255,255,255,0.10)",
+                              borderRadius: 14,
+                              padding: 12,
+                              background: "rgba(0,0,0,0.25)",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                              <div style={{ fontWeight: 800 }}>
+                                Concept {i + 1}, {conceptTitle}
+                              </div>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button className="btn" onClick={() => copyText(conceptText)}>
+                                  Copy concept
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+                              <SectionBlock
+                                title="Top hook"
+                                body={sectionHook}
+                                onCopy={() => copyText(sectionHook)}
+                              />
+                              <SectionBlock
+                                title="On-screen overlay"
+                                body={sectionOverlay}
+                                onCopy={() => copyText(sectionOverlay)}
+                              />
+                              <SectionBlock
+                                title="Caption"
+                                body={sectionCaption}
+                                onCopy={() => copyText(sectionCaption)}
+                              />
+
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                                  <div style={{ fontWeight: 700 }}>Hashtags</div>
+                                  <button className="btn" onClick={() => copyText(sectionTags)} disabled={!sectionTags.trim()}>
+                                    Copy
+                                  </button>
+                                </div>
+
+                                <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  {tags.length ? (
+                                    tags.map((t, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="pill"
+                                        style={{ cursor: "pointer" }}
+                                        title="Click to copy"
+                                        onClick={() => copyText(t)}
+                                      >
+                                        {t}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <div className="smallNote">No hashtags returned.</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="card">
@@ -267,6 +619,47 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
           </div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder }) {
+  return (
+    <div>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      <input
+        className="input"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ width: "100%" }}
+      />
+    </div>
+  );
+}
+
+function SectionBlock({ title, body, onCopy }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+        <div style={{ fontWeight: 700 }}>{title}</div>
+        <button className="btn" onClick={onCopy} disabled={!String(body || "").trim()}>
+          Copy
+        </button>
+      </div>
+      <div
+        className="mono"
+        style={{
+          marginTop: 8,
+          borderRadius: 12,
+          padding: 10,
+          background: "rgba(0,0,0,0.35)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        {String(body || "").trim() || "No content returned."}
+      </div>
     </div>
   );
 }
