@@ -3,27 +3,22 @@ import { NextResponse } from "next/server";
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // ✅ Always allow these public paths
-  const PUBLIC_PATHS = [
-    "/",
-    "/generator", // allow page to load (UI handles access)
-    "/bg.jpg",
-    "/logo.png",
-    "/favicon.ico",
-  ];
-
-  // ✅ Always allow Next internals
+  // Always allow Next internals
   if (pathname.startsWith("/_next/")) return NextResponse.next();
 
-  // ✅ Always allow API routes
-  // But we still block /api/produce if user is not verified
+  // Always allow public assets
+  if (pathname === "/favicon.ico" || pathname === "/bg.jpg" || pathname === "/logo.png") {
+    return NextResponse.next();
+  }
+
+  // Always allow API routes, but protect /api/produce behind beta cookie
   if (pathname.startsWith("/api/")) {
-    // Always allow beta verify route
+    // Always allow key verification
     if (pathname.startsWith("/api/beta/verify")) {
       return NextResponse.next();
     }
 
-    // Protect /api/produce (and anything under it)
+    // Protect producer endpoint(s)
     if (pathname.startsWith("/api/produce")) {
       const hasCookie = req.cookies.get("vp_beta");
       if (!hasCookie) {
@@ -37,24 +32,16 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
-  // ✅ Allow public pages & assets
-  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
+  // ✅ Critical fix: allow /generator to load even without cookie
+  // The page itself has the "Verify key" form, so users can get access.
+  if (pathname.startsWith("/generator")) {
+    return NextResponse.next();
+  }
 
-  // ✅ Optional: protect any future private routes here
-  // Example: /dashboard etc.
-  // const hasCookie = req.cookies.get("vp_beta");
-  // if (!hasCookie) return NextResponse.redirect(new URL("/", req.url));
-
+  // Everything else: allow (landing stays public)
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-      Run middleware on everything EXCEPT:
-      - _next (static)
-      - _next/image
-    */
-    "/((?!_next/static|_next/image).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };
