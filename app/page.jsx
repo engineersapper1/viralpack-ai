@@ -21,7 +21,7 @@ export default function Page() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: val })
+        body: JSON.stringify({ email: val }),
       });
 
       if (!res.ok) {
@@ -44,13 +44,15 @@ export default function Page() {
             src="/logo.png"
             alt="ViralPack.ai"
             style={{ width: 38, height: 38, borderRadius: 10 }}
-    />
+          />
           <div>
             <h1>ViralPack.ai</h1>
             <div className="badge">Landing, Beta soon</div>
           </div>
         </div>
-        <a className="btn" href="#waitlist">Join waitlist</a>
+        <a className="btn" href="#waitlist">
+          Join waitlist
+        </a>
       </div>
 
       <main className="hero">
@@ -64,8 +66,12 @@ export default function Page() {
             </p>
 
             <div className="ctaRow">
-              <a className="btn btnPrimary" href="#waitlist">Get early access</a>
-              <a className="btn" href="#example">See an example</a>
+              <a className="btn btnPrimary" href="#waitlist">
+                Get early access
+              </a>
+              <a className="btn" href="#example">
+                See an example
+              </a>
             </div>
 
             <div className="pills" aria-label="What you get">
@@ -135,9 +141,7 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
       <section className="section" id="waitlist">
         <div className="card">
           <h2>Join the waitlist</h2>
-          <p className="stepBody">
-            We’ll email you when beta opens. One email, no spam.
-          </p>
+          <p className="stepBody">We’ll email you when beta opens. One email, no spam.</p>
 
           <form onSubmit={submitWaitlist} style={{ marginTop: 12 }}>
             <div className="formRow">
@@ -149,7 +153,9 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
                 type="email"
                 autoComplete="email"
               />
-              <button className="btn btnPrimary" type="submit">Notify me</button>
+              <button className="btn btnPrimary" type="submit">
+                Notify me
+              </button>
             </div>
 
             {status.type === "ok" && <div className="toastOk">{status.msg}</div>}
@@ -163,10 +169,22 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
           <div>© {year} ViralPack.ai</div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             <a href="mailto:hello@viralpack.ai">hello@viralpack.ai</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert("Add Privacy Policy later, before Stripe."); }}>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                alert("Add Privacy Policy later, before Stripe.");
+              }}
+            >
               Privacy
             </a>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert("Add Terms later, before Stripe."); }}>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                alert("Add Terms later, before Stripe.");
+              }}
+            >
               Terms
             </a>
           </div>
@@ -175,4 +193,3 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
     </div>
   );
 }
-
