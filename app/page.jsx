@@ -5,10 +5,6 @@ import { useMemo, useState } from "react";
 export default function Page() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState({ type: "", msg: "" });
-  const [assets, setAssets] = useState([]);
-  const [genStatus, setGenStatus] = useState({ type: "", msg: "" });
-  const [isGenerating, setIsGenerating] = useState(false);
-
   const year = useMemo(() => new Date().getFullYear(), []);
 
   async function submitWaitlist(e) {
@@ -35,44 +31,8 @@ export default function Page() {
 
       setEmail("");
       setStatus({ type: "ok", msg: "You’re on the list. We’ll email you when beta opens." });
-    } catch (err) {
+    } catch {
       setStatus({ type: "err", msg: "Couldn’t submit right now. Try again in a minute." });
-    }
-  }
-
-  async function generateHooks() {
-    setGenStatus({ type: "", msg: "" });
-    setIsGenerating(true);
-    setAssets([]);
-
-    try {
-      const res = await fetch("/api/produce/hooks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          brand_name: "ViralPack.ai",
-          product: "SaaS that generates short-form hooks and content concepts",
-          offer: "Early access waitlist",
-          website: "https://viralpack.ai",
-          market: "Creators, agencies, small businesses",
-        }),
-      });
-
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(j?.error || "Producer request failed");
-
-      const list = Array.isArray(j?.assets) ? j.assets : [];
-      setAssets(list);
-
-      if (!list.length) {
-        setGenStatus({ type: "err", msg: "Producer returned no assets. Check Producer logs." });
-      } else {
-        setGenStatus({ type: "ok", msg: `Generated ${list.length} assets.` });
-      }
-    } catch (err) {
-      setGenStatus({ type: "err", msg: "Couldn’t generate right now. Make sure Producer is running." });
-    } finally {
-      setIsGenerating(false);
     }
   }
 
@@ -86,9 +46,15 @@ export default function Page() {
             <div className="badge">Landing, Beta soon</div>
           </div>
         </div>
-        <a className="btn" href="#waitlist">
-          Join waitlist
-        </a>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a className="btn" href="/generator">
+            Beta access
+          </a>
+          <a className="btn btnPrimary" href="#waitlist">
+            Join waitlist
+          </a>
+        </div>
       </div>
 
       <main className="hero">
@@ -97,13 +63,13 @@ export default function Page() {
             <p className="kicker">For agencies, local businesses, creators</p>
             <h2 className="h1">Generate viral content packs in minutes.</h2>
             <p className="sub">
-              Enter 5 details. Get an agency-ready pack: hooks, scripts, shot lists, overlays, captions, and top hashtags.
+              Enter 5 details. Get an agency-ready pack: hooks, overlays, captions, and top hashtags.
               Built to be fast, specific, and shootable.
             </p>
 
             <div className="ctaRow">
-              <a className="btn btnPrimary" href="#waitlist">
-                Get early access
+              <a className="btn btnPrimary" href="/generator">
+                Try the beta generator
               </a>
               <a className="btn" href="#example">
                 See an example
@@ -112,61 +78,18 @@ export default function Page() {
 
             <div className="pills" aria-label="What you get">
               <span className="pill">Top hooks</span>
-              <span className="pill">Scripts</span>
-              <span className="pill">Shot lists</span>
               <span className="pill">On-screen overlays</span>
               <span className="pill">Captions</span>
-              <span className="pill">Top 5 hashtags</span>
+              <span className="pill">Top hashtags</span>
             </div>
 
-            <p className="smallNote">No install. Runs online. Pay-to-play coming after beta.</p>
-
-            <hr className="hr" style={{ marginTop: 16 }} />
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <button className="btn btnPrimary" type="button" onClick={generateHooks} disabled={isGenerating}>
-                {isGenerating ? "Generating..." : "Test Producer (Generate hooks)"}
-              </button>
-              <span className="smallNote" style={{ margin: 0 }}>
-                Local dev only, uses /api/produce/hooks.
-              </span>
-            </div>
-
-            {genStatus.type === "ok" && <div className="toastOk">{genStatus.msg}</div>}
-            {genStatus.type === "err" && <div className="toastErr">{genStatus.msg}</div>}
-
-            {assets.length > 0 && (
-              <div style={{ marginTop: 14 }}>
-                <h3 style={{ margin: "12px 0 8px", fontSize: 16 }}>Top Hooks (Live Producer Output)</h3>
-                <div className="exampleBox">
-                  <div className="mono">
-                    {assets.slice(0, 10).map((a, idx) => (
-                      <div key={idx} style={{ marginBottom: 12 }}>
-                        <div>
-                          <strong>{idx + 1}) Hook:</strong> {a.hook}
-                        </div>
-                        <div>
-                          <strong>Overlay:</strong> {a.on_screen_overlay}
-                        </div>
-                        <div>
-                          <strong>Caption:</strong> {a.caption}
-                        </div>
-                        <div>
-                          <strong>Hashtags:</strong>{" "}
-                          {Array.isArray(a.hashtags) ? a.hashtags.join(" ") : ""}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            <p className="smallNote">Beta requires an access key. Public launch coming soon.</p>
           </div>
 
           <div className="card">
             <h2 style={{ margin: 0, fontSize: 18 }}>How it works</h2>
             <hr className="hr" />
-            <div className="grid3" style={{ gridTemplateColumns: "1fr", gap: 10 }}>
+            <div style={{ display: "grid", gap: 10 }}>
               <div>
                 <p className="stepTitle">1) Enter 5 inputs</p>
                 <p className="stepBody">Brand, product, offer, website, market. Nothing else.</p>
@@ -177,7 +100,7 @@ export default function Page() {
               </div>
               <div>
                 <p className="stepTitle">3) Download and shoot</p>
-                <p className="stepBody">Hand the pack to your editor or film it yourself.</p>
+                <p className="stepBody">Copy what you want, export what you need.</p>
               </div>
             </div>
 
@@ -193,23 +116,24 @@ export default function Page() {
       <section className="section" id="example">
         <div className="card">
           <h2>Example pack preview</h2>
-          <p className="stepBody">
-            This is a trimmed preview. Your real output includes the full script, shot list, overlays, captions, and hashtags.
-          </p>
+          <p className="stepBody">This is a trimmed preview.</p>
           <div className="exampleBox" style={{ marginTop: 12 }}>
             <div className="mono">
-{`SECTION D, Final hooks (Top 5)
-1) “Your AC shouldn’t tap out at 3pm.”
-2) “If your unit sounds like this, stop scrolling.”
-3) “The $79 diagnostic that saves you $1,200.”
-4) “Tampa Bay homeowners: do this before summer hits.”
-5) “This one mistake cooks your compressor.”
+{`TOP HOOKS
+- “Your AC shouldn’t tap out at 3pm.”
+- “If your unit sounds like this, stop scrolling.”
+- “The $79 diagnostic that saves you $1,200.”
 
-SECTION E, Concept (1 of 3)
-Title: “86° to 72° in 18 Minutes”
-Format: Proof + timer + price transparency
-Shots: Thermostat closeup → unit sound → tech diagnostic → before/after → receipt overlay
-Overlays: “No upsell”, “Flat price”, “Same-day when available”, “Tampa Bay” ...`}
+ON SCREEN OVERLAYS
+- “No upsell”
+- “Flat price”
+- “Same-day when available”
+
+CAPTIONS
+- “Tampa Bay homeowners: do this before summer hits.”
+
+HASHTAGS
+#ReelsTips #Homeowners #TampaBay`}
             </div>
           </div>
         </div>
@@ -246,24 +170,7 @@ Overlays: “No upsell”, “Flat price”, “Same-day when available”, “T
           <div>© {year} ViralPack.ai</div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             <a href="mailto:hello@viralpack.ai">hello@viralpack.ai</a>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Add Privacy Policy later, before Stripe.");
-              }}
-            >
-              Privacy
-            </a>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Add Terms later, before Stripe.");
-              }}
-            >
-              Terms
-            </a>
+            <a href="/generator">Beta</a>
           </div>
         </div>
       </footer>
