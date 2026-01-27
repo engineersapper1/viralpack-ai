@@ -17,15 +17,68 @@ export default function Page() {
   });
 
   // Top K controls
-  const [topOnly, setTopOnly] = useState(true); // if true, request/trim to top 5
+  const [topOnly, setTopOnly] = useState(true);
   const TOP_K = 5;
 
   // Producer tester state
   const [isGenerating, setIsGenerating] = useState(false);
   const [genMsg, setGenMsg] = useState("");
   const [genErr, setGenErr] = useState("");
-  const [assets, setAssets] = useState([]); // array of concept objects
-  const [lastResponse, setLastResponse] = useState(null); // raw response for JSON export metadata
+  const [assets, setAssets] = useState([]);
+  const [lastResponse, setLastResponse] = useState(null);
+
+  const buckets = useMemo(() => {
+    const list = Array.isArray(assets) ? assets : [];
+
+    const hooks = [];
+    const overlays = [];
+    const captions = [];
+    const hashtags = [];
+
+    for (const a of list) {
+      const h = cleanLine(a?.hook);
+      const o = cleanLine(a?.on_screen_overlay);
+      const c = cleanLine(a?.caption);
+      const tags = Array.isArray(a?.hashtags) ? a.hashtags : [];
+
+      if (h) hooks.push(h);
+      if (o) overlays.push(o);
+      if (c) captions.push(c);
+
+      for (const t of tags) {
+        const tag = cleanLine(t);
+        if (tag) hashtags.push(tag);
+      }
+    }
+
+    // Dedupe while preserving order
+    const dedupe = (arr) => {
+      const seen = new Set();
+      const out = [];
+      for (const x of arr) {
+        const key = x.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(x);
+      }
+      return out;
+    };
+
+    const h2 = dedupe(hooks);
+    const o2 = dedupe(overlays);
+    const c2 = dedupe(captions);
+    const t2 = dedupe(hashtags);
+
+    // Top K trimming, per bucket
+    const cut = (arr) => (topOnly ? arr.slice(0, TOP_K) : arr);
+
+    return {
+      hooks: cut(h2),
+      overlays: cut(o2),
+      captions: cut(c2),
+      hashtags: cut(t2),
+    };
+  }, [assets, topOnly]);
 
   async function submitWaitlist(e) {
     e.preventDefault();
@@ -61,10 +114,9 @@ export default function Page() {
     return String(v);
   }
 
-  function clampTopK(list, k) {
-    if (!Array.isArray(list)) return [];
-    if (!k || k <= 0) return list;
-    return list.slice(0, k);
+  function cleanLine(v) {
+    const s = safeText(v).replace(/\s+/g, " ").trim();
+    return s || "";
   }
 
   async function copyText(text) {
@@ -96,9 +148,9 @@ export default function Page() {
     }
   }
 
-  function buildPackText(list) {
+  function buildBucketText({ hooks, overlays, captions, hashtags }) {
     const lines = [];
-    lines.push("ViralPack.ai, Producer Test Output");
+    lines.push("ViralPack.ai, Producer Output");
     lines.push(`Generated: ${new Date().toISOString()}`);
     lines.push("");
     lines.push("INPUTS");
@@ -112,28 +164,24 @@ export default function Page() {
     lines.push("============================================================");
     lines.push("");
 
-    (list || []).forEach((a, idx) => {
-      const n = idx + 1;
-      const conceptTitle = a?.concept_title || a?.title || "Untitled";
+    lines.push("TOP HOOKS");
+    (hooks || []).forEach((h) => lines.push(`- ${h}`));
+    lines.push("");
 
-      lines.push(`CONCEPT ${n}, ${conceptTitle}`);
-      lines.push("");
-      lines.push("TOP HOOK");
-      lines.push(safeText(a?.hook));
-      lines.push("");
-      lines.push("ON SCREEN OVERLAY");
-      lines.push(safeText(a?.on_screen_overlay));
-      lines.push("");
-      lines.push("CAPTION");
-      lines.push(safeText(a?.caption));
-      lines.push("");
-      lines.push("HASHTAGS");
-      const tags = Array.isArray(a?.hashtags) ? a.hashtags : [];
-      lines.push(tags.join(" "));
-      lines.push("");
-      lines.push("------------------------------------------------------------");
-      lines.push("");
-    });
+    lines.push("ON SCREEN OVERLAYS");
+    (overlays || []).forEach((o) => lines.push(`- ${o}`));
+    lines.push("");
+
+    lines.push("CAPTIONS");
+    (captions || []).forEach((c) => lines.push(`- ${c}`));
+    lines.push("");
+
+    lines.push("HASHTAGS");
+    (hashtags || []).forEach((t) => lines.push(`${t}`));
+    lines.push("");
+
+    lines.push("------------------------------------------------------------");
+    lines.push("");
 
     return lines.join("\n");
   }
@@ -151,16 +199,16 @@ export default function Page() {
   }
 
   function exportTxt() {
-    const txt = buildPackText(assets);
+    const txt = buildBucketText(buckets);
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     downloadFile(`viralpack-pack-${stamp}.txt`, txt, "text/plain;charset=utf-8");
   }
 
-  // Stable, versioned JSON export wrapper (future-proof)
+  // Versioned JSON export wrapper (includes raw + derived buckets)
   function buildExportJson() {
     const stamp = new Date().toISOString();
     return {
-      schema_version: "vp_pack_export_v1",
+      schema_version: "vp_pack_export_v2",
       generated_at: stamp,
       request: {
         schema_version: "vp_request_v1",
@@ -172,7 +220,14 @@ export default function Page() {
         upstream: {
           schema_version: safeText(lastResponse?.schema_version || ""),
         },
-        assets: assets,
+        raw_assets: assets,
+        buckets: {
+          schema_version: "vp_buckets_v1",
+          hooks: buckets.hooks,
+          on_screen_overlays: buckets.overlays,
+          captions: buckets.captions,
+          hashtags: buckets.hashtags,
+        },
       },
     };
   }
@@ -193,7 +248,6 @@ export default function Page() {
     setLastResponse(null);
 
     try {
-      // Send editable inputs + optional top_k
       const payload = {
         ...form,
         ...(topOnly ? { top_k: TOP_K } : {}),
@@ -214,18 +268,15 @@ export default function Page() {
 
       setLastResponse(data);
 
-      // Accept either { assets: [...] } OR { hooks_pack: { assets: [...] } }
       const rawList = Array.isArray(data?.assets)
         ? data.assets
         : Array.isArray(data?.hooks_pack?.assets)
         ? data.hooks_pack.assets
         : [];
 
-      // Safety trim client-side too
-      const list = topOnly ? clampTopK(rawList, TOP_K) : rawList;
-
-      setAssets(list);
-      setGenMsg(list.length ? `Generated ${list.length} concepts.` : "No concepts returned.");
+      // Keep raw assets as-is, buckets will top-k themselves
+      setAssets(rawList);
+      setGenMsg(rawList.length ? "Generated output." : "No output returned.");
     } catch (e) {
       setGenErr(e?.message || "Couldn’t generate right now. Make sure Producer is running.");
       setGenMsg("");
@@ -236,6 +287,23 @@ export default function Page() {
 
   function onChangeField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function hasAnyOutput() {
+    return (
+      buckets.hooks.length ||
+      buckets.overlays.length ||
+      buckets.captions.length ||
+      buckets.hashtags.length
+    );
+  }
+
+  function copySection(title, arr, formatter) {
+    const lines = [];
+    lines.push(title);
+    lines.push("");
+    (arr || []).forEach((x) => lines.push(formatter ? formatter(x) : x));
+    return copyText(lines.join("\n"));
   }
 
   return (
@@ -278,11 +346,9 @@ export default function Page() {
 
             <div className="pills" aria-label="What you get">
               <span className="pill">Top hooks</span>
-              <span className="pill">Scripts</span>
-              <span className="pill">Shot lists</span>
               <span className="pill">On-screen overlays</span>
               <span className="pill">Captions</span>
-              <span className="pill">Top 5 hashtags</span>
+              <span className="pill">Top hashtags</span>
             </div>
 
             <p className="smallNote">No install. Runs online. Pay-to-play coming after beta.</p>
@@ -333,7 +399,7 @@ export default function Page() {
                       disabled={isGenerating}
                     />
                     <span className="smallNote" style={{ margin: 0 }}>
-                      Return top {TOP_K} only
+                      Return top {TOP_K} only (per category)
                     </span>
                   </label>
 
@@ -355,8 +421,8 @@ export default function Page() {
 
                   <button
                     className="btn"
-                    onClick={() => copyText(buildPackText(assets))}
-                    disabled={!assets.length || isGenerating}
+                    onClick={() => copyText(buildBucketText(buckets))}
+                    disabled={!hasAnyOutput() || isGenerating}
                     title="Copy the full generated pack as text."
                   >
                     Copy full pack
@@ -365,7 +431,7 @@ export default function Page() {
                   <button
                     className="btn"
                     onClick={exportTxt}
-                    disabled={!assets.length || isGenerating}
+                    disabled={!hasAnyOutput() || isGenerating}
                     title="Download a .txt file of the generated pack."
                   >
                     Export .txt
@@ -374,7 +440,7 @@ export default function Page() {
                   <button
                     className="btn"
                     onClick={exportJson}
-                    disabled={!assets.length || isGenerating}
+                    disabled={!hasAnyOutput() || isGenerating}
                     title="Download a versioned JSON export for future compatibility."
                   >
                     Export JSON
@@ -394,14 +460,14 @@ export default function Page() {
                 ) : null}
               </div>
 
-              {/* Results */}
-              {assets.length ? (
+              {/* Results, bucketed */}
+              {hasAnyOutput() ? (
                 <div style={{ marginTop: 14 }}>
                   <div className="exampleBox" style={{ marginTop: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                      <div style={{ fontWeight: 800 }}>Generated Concepts</div>
+                      <div style={{ fontWeight: 800 }}>Generated Picks</div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button className="btn" onClick={() => copyText(buildPackText(assets))}>
+                        <button className="btn" onClick={() => copyText(buildBucketText(buckets))}>
                           Copy all
                         </button>
                         <button className="btn" onClick={exportTxt}>
@@ -413,101 +479,37 @@ export default function Page() {
                       </div>
                     </div>
 
-                    <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                      {assets.map((a, i) => {
-                        const tags = Array.isArray(a?.hashtags) ? a.hashtags : [];
-                        const conceptTitle = a?.concept_title || a?.title || "Untitled";
+                    <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+                      <BucketBlock
+                        title="Top hooks"
+                        items={buckets.hooks}
+                        onCopyAll={() => copySection("TOP HOOKS", buckets.hooks, (x) => `- ${x}`)}
+                        onCopyItem={(x) => copyText(x)}
+                      />
 
-                        const sectionHook = safeText(a?.hook);
-                        const sectionOverlay = safeText(a?.on_screen_overlay);
-                        const sectionCaption = safeText(a?.caption);
-                        const sectionTags = tags.join(" ");
+                      <BucketBlock
+                        title="On-screen overlays"
+                        items={buckets.overlays}
+                        onCopyAll={() =>
+                          copySection("ON SCREEN OVERLAYS", buckets.overlays, (x) => `- ${x}`)
+                        }
+                        onCopyItem={(x) => copyText(x)}
+                      />
 
-                        const conceptText =
-                          [
-                            `CONCEPT ${i + 1}, ${conceptTitle}`,
-                            "",
-                            "TOP HOOK",
-                            sectionHook,
-                            "",
-                            "ON SCREEN OVERLAY",
-                            sectionOverlay,
-                            "",
-                            "CAPTION",
-                            sectionCaption,
-                            "",
-                            "HASHTAGS",
-                            sectionTags,
-                          ].join("\n");
+                      <BucketBlock
+                        title="Captions"
+                        items={buckets.captions}
+                        onCopyAll={() => copySection("CAPTIONS", buckets.captions, (x) => `- ${x}`)}
+                        onCopyItem={(x) => copyText(x)}
+                        multiline
+                      />
 
-                        return (
-                          <div
-                            key={i}
-                            style={{
-                              border: "1px solid rgba(255,255,255,0.10)",
-                              borderRadius: 14,
-                              padding: 12,
-                              background: "rgba(0,0,0,0.25)",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                              <div style={{ fontWeight: 800 }}>
-                                Concept {i + 1}, {conceptTitle}
-                              </div>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button className="btn" onClick={() => copyText(conceptText)}>
-                                  Copy concept
-                                </button>
-                              </div>
-                            </div>
-
-                            <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
-                              <SectionBlock
-                                title="Top hook"
-                                body={sectionHook}
-                                onCopy={() => copyText(sectionHook)}
-                              />
-                              <SectionBlock
-                                title="On-screen overlay"
-                                body={sectionOverlay}
-                                onCopy={() => copyText(sectionOverlay)}
-                              />
-                              <SectionBlock
-                                title="Caption"
-                                body={sectionCaption}
-                                onCopy={() => copyText(sectionCaption)}
-                              />
-
-                              <div>
-                                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-                                  <div style={{ fontWeight: 700 }}>Hashtags</div>
-                                  <button className="btn" onClick={() => copyText(sectionTags)} disabled={!sectionTags.trim()}>
-                                    Copy
-                                  </button>
-                                </div>
-
-                                <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                  {tags.length ? (
-                                    tags.map((t, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="pill"
-                                        style={{ cursor: "pointer" }}
-                                        title="Click to copy"
-                                        onClick={() => copyText(t)}
-                                      >
-                                        {t}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <div className="smallNote">No hashtags returned.</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      <HashtagBucket
+                        title="Hashtags"
+                        tags={buckets.hashtags}
+                        onCopyAll={() => copyText(buckets.hashtags.join(" "))}
+                        onCopyTag={(t) => copyText(t)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -529,7 +531,7 @@ export default function Page() {
               </div>
               <div>
                 <p className="stepTitle">3) Download and shoot</p>
-                <p className="stepBody">Hand the pack to your editor or film it yourself.</p>
+                <p className="stepBody">Copy what you want, export what you need.</p>
               </div>
             </div>
 
@@ -550,18 +552,21 @@ export default function Page() {
           </p>
           <div className="exampleBox" style={{ marginTop: 12 }}>
             <div className="mono">
-{`SECTION D, Final hooks (Top 5)
-1) “Your AC shouldn’t tap out at 3pm.”
-2) “If your unit sounds like this, stop scrolling.”
-3) “The $79 diagnostic that saves you $1,200.”
-4) “Tampa Bay homeowners: do this before summer hits.”
-5) “This one mistake cooks your compressor.”
+{`TOP HOOKS
+- “Your AC shouldn’t tap out at 3pm.”
+- “If your unit sounds like this, stop scrolling.”
+- “The $79 diagnostic that saves you $1,200.”
 
-SECTION E, Concept (1 of 3)
-Title: “86° to 72° in 18 Minutes”
-Format: Proof + timer + price transparency
-Shots: Thermostat closeup → unit sound → tech diagnostic → before/after → receipt overlay
-Overlays: “No upsell”, “Flat price”, “Same-day when available”, “Tampa Bay” ...`}
+ON SCREEN OVERLAYS
+- “No upsell”
+- “Flat price”
+- “Same-day when available”
+
+CAPTIONS
+- “Tampa Bay homeowners: do this before summer hits.”
+
+HASHTAGS
+#ReelsTips #Homeowners #TampaBay`}
             </div>
           </div>
         </div>
@@ -638,27 +643,95 @@ function Field({ label, value, onChange, placeholder }) {
   );
 }
 
-function SectionBlock({ title, body, onCopy }) {
+function BucketBlock({ title, items, onCopyAll, onCopyItem, multiline }) {
+  const list = Array.isArray(items) ? items : [];
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-        <div style={{ fontWeight: 700 }}>{title}</div>
-        <button className="btn" onClick={onCopy} disabled={!String(body || "").trim()}>
-          Copy
+    <div
+      style={{
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 14,
+        padding: 12,
+        background: "rgba(0,0,0,0.25)",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 800 }}>{title}</div>
+        <button className="btn" onClick={onCopyAll} disabled={!list.length}>
+          Copy all
         </button>
       </div>
-      <div
-        className="mono"
-        style={{
-          marginTop: 8,
-          borderRadius: 12,
-          padding: 10,
-          background: "rgba(0,0,0,0.35)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          whiteSpace: "pre-wrap",
-        }}
-      >
-        {String(body || "").trim() || "No content returned."}
+
+      <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+        {list.length ? (
+          list.map((x, idx) => (
+            <div
+              key={idx}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: 10,
+                alignItems: "start",
+              }}
+            >
+              <div
+                className="mono"
+                style={{
+                  borderRadius: 12,
+                  padding: 10,
+                  background: "rgba(0,0,0,0.35)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  whiteSpace: multiline ? "pre-wrap" : "normal",
+                }}
+              >
+                {x}
+              </div>
+              <button className="btn" onClick={() => onCopyItem(x)}>
+                Copy
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="smallNote">No items returned.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HashtagBucket({ title, tags, onCopyAll, onCopyTag }) {
+  const list = Array.isArray(tags) ? tags : [];
+  return (
+    <div
+      style={{
+        border: "1px solid rgba(255,255,255,0.10)",
+        borderRadius: 14,
+        padding: 12,
+        background: "rgba(0,0,0,0.25)",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ fontWeight: 800 }}>{title}</div>
+        <button className="btn" onClick={onCopyAll} disabled={!list.length}>
+          Copy all
+        </button>
+      </div>
+
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {list.length ? (
+          list.map((t, idx) => (
+            <span
+              key={idx}
+              className="pill"
+              style={{ cursor: "pointer" }}
+              title="Click to copy"
+              onClick={() => onCopyTag(t)}
+            >
+              {t}
+            </span>
+          ))
+        ) : (
+          <div className="smallNote">No hashtags returned.</div>
+        )}
       </div>
     </div>
   );
