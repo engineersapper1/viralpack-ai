@@ -1,259 +1,216 @@
 :root {
-  --bg: #05060a;
-  --card: rgba(10, 12, 18, 0.70);
-  --border: rgba(255, 255, 255, 0.10);
+  --bg: #0b0f19;
+  --card: rgba(255, 255, 255, 0.06);
+  --cardBorder: rgba(255, 255, 255, 0.10);
   --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.70);
-  --accent: #7cf6ff;
+  --muted: rgba(255, 255, 255, 0.72);
+  --muter: rgba(255, 255, 255, 0.56);
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
 }
 
-* { box-sizing: border-box; }
-
-html, body {
-  padding: 0;
+/* Mobile Safari friendly full-height */
+html,
+body {
+  height: 100%;
   margin: 0;
+  padding: 0;
+}
+
+body {
   color: var(--text);
-  background: var(--bg);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
+  background-color: var(--bg);
 
-a { color: inherit; text-decoration: none; }
-
-/* Background system */
-.vp-bg {
-  position: relative;
-  min-height: 100vh;
-}
-
-.vp-bg__img {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
+  /* ✅ Consistent background on desktop + mobile */
   background-image: url("/bg.jpg");
-  background-size: cover;
-  background-position: center;
   background-repeat: no-repeat;
-  transform: scale(1.02);
-  filter: saturate(1.15) contrast(1.05) brightness(0.9);
+  background-position: center top;
+  background-size: cover;
+
+  /* Helps iOS Safari paint smoothly */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.vp-bg__overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  background:
-    radial-gradient(1200px 700px at 20% 10%, rgba(124, 246, 255, 0.16), transparent 55%),
-    radial-gradient(900px 600px at 85% 20%, rgba(255, 120, 240, 0.14), transparent 55%),
-    radial-gradient(900px 700px at 70% 85%, rgba(120, 255, 160, 0.12), transparent 60%),
-    linear-gradient(180deg, rgba(5, 6, 10, 0.70), rgba(5, 6, 10, 0.90));
-  backdrop-filter: blur(2px);
+/* Optional: avoid iOS "zoom" on inputs by ensuring font-size >= 16px */
+input,
+button,
+textarea {
+  font: inherit;
+  font-size: 16px;
 }
 
-.vp-foreground {
-  position: relative;
-  z-index: 2;
-}
-
-/* Layout */
+/* A safe container */
 .container {
-  max-width: 1060px;
+  width: min(1080px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 22px 18px 40px;
+  padding: 18px 0 36px;
 }
 
+/* Top nav */
 .nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0 18px;
+  gap: 14px;
+  padding: 12px 0;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.brand h1 {
-  font-size: 16px;
+h1 {
+  font-size: 18px;
+  line-height: 1.15;
   margin: 0;
-  letter-spacing: 0.2px;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--cardBorder);
+  border-radius: 999px;
   color: var(--muted);
-  margin-top: 4px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  width: fit-content;
 }
 
+/* Layout */
 .hero {
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .heroGrid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1fr 1fr;
   gap: 14px;
 }
 
-@media (max-width: 860px) {
-  .heroGrid { grid-template-columns: 1fr; }
-}
-
+/* Cards */
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--cardBorder);
   border-radius: 16px;
+  box-shadow: var(--shadow);
   padding: 16px;
-  box-shadow: 0 10px 35px rgba(0,0,0,0.25);
+  backdrop-filter: blur(10px);
 }
 
 .kicker {
-  margin: 0 0 8px;
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--muter);
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .h1 {
-  margin: 0 0 10px;
-  font-size: 34px;
-  line-height: 1.08;
-  letter-spacing: -0.6px;
+  margin: 0 0 8px;
+  font-size: 28px;
+  letter-spacing: -0.02em;
 }
 
 .sub {
-  margin: 0 0 14px;
+  margin: 0;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1.55;
-}
-
-.ctaRow {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.btn:hover {
-  background: rgba(255,255,255,0.09);
-}
-
-.btnPrimary {
-  border-color: rgba(124, 246, 255, 0.35);
-  background: rgba(124, 246, 255, 0.12);
-}
-
-.pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.pill {
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.88);
-}
-
-.smallNote {
-  margin: 12px 0 0;
-  color: rgba(255,255,255,0.62);
-  font-size: 12px;
+  line-height: 1.5;
 }
 
 .hr {
-  border: none;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  margin: 12px 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 14px 0;
 }
 
-.stepTitle {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.stepBody {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.section {
-  margin-top: 16px;
-}
-
-.exampleBox {
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.25);
-  padding: 12px;
-  overflow: auto;
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  color: rgba(255,255,255,0.86);
-}
-
-.formRow {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
+/* Inputs / buttons */
 .input {
-  flex: 1;
-  min-width: 220px;
-  padding: 10px 12px;
+  width: 100%;
+  border: 1px solid var(--cardBorder);
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.20);
+  padding: 12px 12px;
+  background: rgba(0, 0, 0, 0.25);
   color: var(--text);
   outline: none;
 }
 
-.toastOk, .toastErr {
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.btn {
+  border: 1px solid var(--cardBorder);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Output boxes */
+.exampleBox {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.stepTitle {
+  margin: 0;
+  font-weight: 800;
+}
+
+.smallNote {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+/* Toasts */
+.toastOk {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  font-size: 13px;
+  border: 1px solid rgba(114, 255, 180, 0.35);
+  background: rgba(114, 255, 180, 0.10);
 }
 
-.toastOk { background: rgba(120, 255, 160, 0.12); }
-.toastErr { background: rgba(255, 120, 240, 0.12); }
+.toastErr {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  background: rgba(255, 120, 120, 0.10);
+}
 
+/* Footer */
 .footer {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255,255,255,0.10);
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
 }
 
 .footerRow {
@@ -261,6 +218,26 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  color: rgba(255,255,255,0.70);
-  font-size: 13px;
+}
+
+/* ✅ Mobile layout fixes */
+@media (max-width: 900px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    width: calc(100% - 20px);
+  }
+
+  .h1 {
+    font-size: 24px;
+  }
+}
+
+/* ✅ Prevent iOS from “stretching” the background weirdly when the address bar collapses */
+@supports (height: 100svh) {
+  body {
+    min-height: 100svh;
+  }
 }
