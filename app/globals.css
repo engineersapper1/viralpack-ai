@@ -1,91 +1,83 @@
 :root {
-  --bg: #0b0f19;
-
-  /* ✅ readability tuned */
-  --card: rgba(0, 0, 0, 0.15);          /* 15% */
-  --cardStrong: rgba(0, 0, 0, 0.22);     /* slightly stronger blocks */
-  --border: rgba(255, 255, 255, 0.12);
-
+  --bg: #050512;
+  --card: rgba(10, 12, 25, 0.82);         /* less transparent than before */
+  --cardBorder: rgba(255, 255, 255, 0.10);
   --text: rgba(255, 255, 255, 0.92);
-  --muted: rgba(255, 255, 255, 0.72);
-  --muter: rgba(255, 255, 255, 0.56);
-
-  --shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  --muted: rgba(255, 255, 255, 0.70);
+  --muted2: rgba(255, 255, 255, 0.58);
+  --btn: rgba(255, 255, 255, 0.10);
+  --btnHover: rgba(255, 255, 255, 0.14);
+  --primary: rgba(90, 210, 255, 0.22);
+  --primaryBorder: rgba(90, 210, 255, 0.35);
+  --inputBg: rgba(255, 255, 255, 0.12);  /* was too translucent */
+  --inputBorder: rgba(255, 255, 255, 0.12);
+  --shadow: 0 18px 60px rgba(0,0,0,0.45);
 }
 
-/* Mobile Safari friendly full-height */
-html,
-body {
-  height: 100%;
+* { box-sizing: border-box; }
+
+html, body {
   margin: 0;
   padding: 0;
-}
-
-body {
+  background: var(--bg);
   color: var(--text);
-  background-color: var(--bg);
-
-  /* ✅ consistent background */
-  background-image: url("/bg.jpg");
-  background-repeat: no-repeat;
-  background-position: center top;
-  background-size: cover;
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
-/* Prevent iOS input zoom */
-input,
-button,
-textarea {
-  font: inherit;
-  font-size: 16px;
-}
+a { color: inherit; text-decoration: none; }
 
 .container {
-  width: min(1080px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 18px 0 36px;
+  min-height: 100vh;
+  background-image: url("/bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
 }
 
-/* Top nav */
+@media (max-width: 980px) {
+  .container { background-attachment: scroll; }
+}
+
 .nav {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 18px 10px 18px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   gap: 14px;
-  padding: 12px 0;
+  flex-wrap: wrap;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
-h1 {
-  font-size: 18px;
-  line-height: 1.15;
+.brand h1 {
   margin: 0;
+  font-size: 16px;
+  letter-spacing: 0.2px;
 }
 
 .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--muted);
+  margin-top: 2px;
   font-size: 12px;
-  background: rgba(0, 0, 0, 0.22);
-  width: fit-content;
+  color: rgba(255,255,255,0.75);
 }
 
-/* Layout */
+.navActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .hero {
-  margin-top: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 18px 34px 18px;
 }
 
 .heroGrid {
@@ -94,166 +86,221 @@ h1 {
   gap: 14px;
 }
 
-/* Cards */
+.heroGridLanding {
+  align-items: start;
+}
+
+@media (max-width: 980px) {
+  .heroGrid { grid-template-columns: 1fr; }
+}
+
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  border: 1px solid var(--cardBorder);
+  border-radius: 18px;
+  padding: 18px;
   box-shadow: var(--shadow);
-  padding: 16px;
   backdrop-filter: blur(12px);
 }
 
-/* ✅ Fix “jumbled words” look on mobile */
-.h1 {
-  margin: 0 0 8px;
-  font-size: 28px;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
-  word-break: normal;
-  overflow-wrap: anywhere;
+.kicker {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.70);
 }
 
-.kicker {
-  color: var(--muter);
-  margin: 0 0 10px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.h1 {
+  margin: 10px 0 6px 0;
+  font-size: 38px;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
 }
 
 .sub {
   margin: 0;
-  color: var(--muted);
-  line-height: 1.55;
+  color: rgba(255,255,255,0.78);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .h1 {
+    font-size: 28px;
+    line-height: 1.15;
+  }
+  .sub {
+    font-size: 14px;
+  }
 }
 
 .hr {
   height: 1px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255,255,255,0.10);
   margin: 14px 0;
 }
 
-/* Inputs / buttons */
-.input {
-  width: 100%;
-  border: 1px solid var(--border);
+.btn {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--btn);
+  color: rgba(255,255,255,0.92);
+  padding: 10px 12px;
   border-radius: 12px;
-  padding: 12px 12px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 13px;
+  transition: transform 0.06s ease, background 0.12s ease;
+}
 
-  /* ✅ less translucent / more readable */
-  background: var(--cardStrong);
-  color: var(--text);
+.btn:hover { background: var(--btnHover); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btnPrimary {
+  background: var(--primary);
+  border-color: var(--primaryBorder);
+}
+
+.input {
+  background: var(--inputBg);
+  border: 1px solid var(--inputBorder);
+  color: rgba(255,255,255,0.92);
+  padding: 10px 12px;
+  border-radius: 12px;
   outline: none;
 }
 
-.input::placeholder {
-  color: rgba(255, 255, 255, 0.48);
-}
-
-.btn {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-
-  /* ✅ readable buttons */
-  background: rgba(0, 0, 0, 0.22);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.btnPrimary {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-/* Output boxes */
-.exampleBox {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  padding: 12px;
-
-  /* ✅ less translucent / more readable */
-  background: rgba(0, 0, 0, 0.22);
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-size: 13px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: rgba(255, 255, 255, 0.88);
-}
-
-.stepTitle {
-  margin: 0;
-  font-weight: 800;
-}
+.input::placeholder { color: rgba(255,255,255,0.55); }
 
 .smallNote {
-  margin: 10px 0 0;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 12px;
+  margin: 10px 0 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.68);
 }
 
-/* Toasts */
 .toastOk {
   margin-top: 10px;
   padding: 10px 12px;
+  background: rgba(110, 255, 190, 0.12);
+  border: 1px solid rgba(110, 255, 190, 0.20);
   border-radius: 12px;
-  border: 1px solid rgba(114, 255, 180, 0.35);
-  background: rgba(0, 0, 0, 0.18);
+  color: rgba(240, 255, 248, 0.92);
+  font-size: 13px;
 }
 
 .toastErr {
   margin-top: 10px;
   padding: 10px 12px;
+  background: rgba(255, 110, 110, 0.12);
+  border: 1px solid rgba(255, 110, 110, 0.20);
   border-radius: 12px;
-  border: 1px solid rgba(255, 120, 120, 0.35);
-  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 240, 240, 0.92);
+  font-size: 13px;
 }
 
-/* Footer */
+.exampleBox {
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: rgba(255,255,255,0.86);
+}
+
+.section {
+  margin-top: 10px;
+}
+
+.stepRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.stepNum {
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: rgba(90, 210, 255, 0.16);
+  border: 1px solid rgba(90, 210, 255, 0.25);
+}
+
+.stepTitle {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.stepDesc {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.70);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ctaRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.waitlistRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.waitlistRow .input {
+  min-width: 240px;
+  flex: 1;
+}
+
 .footer {
-  margin-top: 16px;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 18px 26px 18px;
 }
 
 .footerRow {
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.10);
   display: flex;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  color: rgba(255,255,255,0.70);
+  font-size: 13px;
+}
+/* # -- INSERT HERE (paste at very bottom of file) -- */
+
+/* Prevent iOS Safari from auto-resizing text */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-/* ✅ Mobile layout fixes */
-@media (max-width: 900px) {
-  .heroGrid {
-    grid-template-columns: 1fr;
-  }
+/* Make desktop + mobile background behavior consistent */
+.container {
+  background-attachment: fixed;
+}
 
+@media (max-width: 980px) {
   .container {
-    width: calc(100% - 20px);
-  }
-
-  /* ✅ mobile headline: cleaner wrap */
-  .h1 {
-    font-size: 24px;
-    line-height: 1.18;
-    letter-spacing: -0.01em;
+    background-attachment: scroll;
   }
 }
 
-/* ✅ Avoid iOS background jump when address bar collapses */
-@supports (height: 100svh) {
-  body {
-    min-height: 100svh;
-  }
-}
+/* # -- INSERT HERE -- */

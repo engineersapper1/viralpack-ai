@@ -1,62 +1,58 @@
-import crypto from "crypto";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const COOKIE_NAME = "vp_beta";
-const DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 14; // 14 days
-
-function base64url(buf) {
-  return Buffer.from(buf)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+function json(status, obj) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
-function sign(payloadStr, secret) {
-  return base64url(crypto.createHmac("sha256", secret).update(payloadStr).digest());
+function mustEnv(name) {
+  const v = process.env[name];
+  if (!v || !String(v).trim()) throw new Error(`Missing env var: ${name}`);
+  return String(v).trim();
 }
 
-function mintToken({ ttlSeconds, secret }) {
-  const exp = Date.now() + ttlSeconds * 1000;
-  const payloadStr = JSON.stringify({ exp });
-  const payloadB64 = base64url(payloadStr);
-  const sig = sign(payloadStr, secret);
-  return `${payloadB64}.${sig}`;
+function parseKeysList(raw) {
+  return String(raw || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export async function POST(req) {
   try {
-    const { key } = await req.json();
+    // Ensure secret exists (even if you don't sign, you want it present)
+    mustEnv("BETA_COOKIE_SECRET");
 
-    const secret = process.env.BETA_COOKIE_SECRET || "";
-    const allow = (process.env.BETA_KEYS || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const body = await req.json().catch(() => null);
+    const key = String(body?.key || "").trim();
+    if (!key) return json(400, { ok: false, error: "Missing key" });
 
-    if (!secret) {
-      return Response.json({ ok: false, error: "Missing BETA_COOKIE_SECRET" }, { status: 500 });
+    const allowed = parseKeysList(process.env.BETA_KEYS || "");
+    if (!allowed.length) {
+      return json(500, { ok: false, error: "Server misconfigured (BETA_KEYS missing)" });
     }
 
-    if (!allow.length) {
-      return Response.json({ ok: false, error: "No beta keys configured" }, { status: 500 });
+    if (!allowed.includes(key)) {
+      return json(401, { ok: false, error: "Invalid key" });
     }
 
-    const k = String(key || "").trim();
-    if (!k || !allow.includes(k)) {
-      return Response.json({ ok: false, error: "Invalid key" }, { status: 401 });
-    }
-
-    const token = mintToken({ ttlSeconds: DEFAULT_TTL_SECONDS, secret });
+    // Set cookie (mobile-safe flags)
+    const isProd = process.env.NODE_ENV === "production";
+    const cookie =
+      `vp_beta=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}` +
+      (isProd ? "; Secure" : "");
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        // HttpOnly so it can’t be stolen by frontend JS.
-        "Set-Cookie": `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${DEFAULT_TTL_SECONDS}; Secure`,
+        "Set-Cookie": cookie,
       },
     });
-  } catch {
-    return Response.json({ ok: false, error: "Bad request" }, { status: 400 });
+  } catch (e) {
+    return json(500, { ok: false, error: e?.message || String(e) });
   }
 }
