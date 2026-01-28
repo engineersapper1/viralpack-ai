@@ -3,31 +3,27 @@ import { NextResponse } from "next/server";
 export function middleware(req) {
   const { pathname } = req.nextUrl;
 
-  // Always allow Next internals
+  // Allow Next internals + static
   if (pathname.startsWith("/_next/")) return NextResponse.next();
 
-  // Always allow public assets
-  if (
-    pathname === "/favicon.ico" ||
-    pathname === "/bg.jpg" ||
-    pathname === "/logo.png"
-  ) {
+  // Public assets
+  if (pathname === "/favicon.ico" || pathname === "/bg.jpg" || pathname === "/logo.png") {
     return NextResponse.next();
   }
 
-  // Always allow the generator page to load (so user can enter key on fresh devices)
+  // Always allow generator page to load so new devices can verify key
   if (pathname.startsWith("/generator")) {
     return NextResponse.next();
   }
 
-  // API handling
+  // API routes
   if (pathname.startsWith("/api/")) {
-    // Always allow verify route (needed to set cookie)
+    // Allow verification always
     if (pathname.startsWith("/api/beta/verify")) {
       return NextResponse.next();
     }
 
-    // Protect the paid/spendy route
+    // Protect generation routes
     if (pathname.startsWith("/api/produce")) {
       const hasCookie = req.cookies.get("vp_beta")?.value;
       if (!hasCookie) {
