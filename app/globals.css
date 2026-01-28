@@ -284,3 +284,23 @@ a { color: inherit; text-decoration: none; }
   color: rgba(255,255,255,0.70);
   font-size: 13px;
 }
+/* # -- INSERT HERE (paste at very bottom of file) -- */
+
+/* Prevent iOS Safari from auto-resizing text */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Make desktop + mobile background behavior consistent */
+.container {
+  background-attachment: fixed;
+}
+
+@media (max-width: 980px) {
+  .container {
+    background-attachment: scroll;
+  }
+}
+
+/* # -- INSERT HERE -- */
