@@ -71,9 +71,6 @@ export default function Page() {
               <a className="btn btnPrimary" href="/generator">
                 Try the beta generator
               </a>
-              <a className="btn" href="#example">
-                See an example
-              </a>
             </div>
 
             <div className="pills" aria-label="What you get">
