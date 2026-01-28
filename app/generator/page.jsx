@@ -121,14 +121,12 @@ export default function GeneratorPage() {
 
   function exportJson() {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    downloadFile(
-      `viralpack-pack-${stamp}.json`,
-      JSON.stringify(result, null, 2),
-      "application/json;charset=utf-8"
-    );
+    downloadFile(`viralpack-pack-${stamp}.json`, JSON.stringify(result, null, 2), "application/json;charset=utf-8");
   }
 
-  async function verifyKey() {
+  async function verifyKey(e) {
+    if (e?.preventDefault) e.preventDefault();
+
     setGateErr("");
     setGateMsg("");
 
@@ -142,12 +140,16 @@ export default function GeneratorPage() {
       const r = await fetch("/api/beta/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({ key }),
       });
 
       const text = await r.text();
       let j = null;
-      try { j = JSON.parse(text); } catch {}
+      try {
+        j = JSON.parse(text);
+      } catch {}
 
       if (!r.ok || !j?.ok) {
         throw new Error(j?.error || `Verify failed (${r.status}): ${text.slice(0, 120)}`);
@@ -157,14 +159,15 @@ export default function GeneratorPage() {
       setGateKey("");
       setTimeout(() => setGateMsg(""), 1200);
 
-      // refresh so middleware sees cookie in navigation flow too
+      // Reload so middleware + page requests see the cookie immediately
       window.location.reload();
-    } catch (e) {
-      setGateErr(e?.message || "Couldn’t verify key.");
+    } catch (err) {
+      setGateErr(err?.message || "Couldn’t verify key.");
     }
   }
 
-  async function generate() {
+  async function generate(e) {
+    if (e?.preventDefault) e.preventDefault();
     if (isGenerating) return;
 
     setIsGenerating(true);
@@ -178,22 +181,29 @@ export default function GeneratorPage() {
       const r = await fetch("/api/produce", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify(payload),
       });
 
       const text = await r.text();
       let data = null;
-      try { data = JSON.parse(text); } catch {}
+      try {
+        data = JSON.parse(text);
+      } catch {}
 
       if (!r.ok) {
-        const msg = data?.error || data?.detail || `Request failed (${r.status}): ${text.slice(0, 140)}`;
+        const msg =
+          data?.error ||
+          data?.detail ||
+          `Request failed (${r.status}): ${text.slice(0, 140)}`;
         throw new Error(msg);
       }
 
       setResult(data);
       setGenMsg("Generated output.");
-    } catch (e) {
-      setGenErr(e?.message || "Couldn’t generate. Check server logs.");
+    } catch (err) {
+      setGenErr(err?.message || "Couldn’t generate. Check server logs.");
       setGenMsg("");
     } finally {
       setIsGenerating(false);
@@ -243,7 +253,12 @@ export default function GeneratorPage() {
                 style={{ minWidth: 260 }}
                 disabled={isGenerating}
               />
-              <button className="btn btnPrimary" onClick={verifyKey} disabled={isGenerating}>
+              <button
+                type="button"
+                className="btn btnPrimary"
+                onClick={verifyKey}
+                disabled={isGenerating}
+              >
                 Verify key
               </button>
             </div>
@@ -264,19 +279,29 @@ export default function GeneratorPage() {
             <div className="hr" />
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-              <button className="btn btnPrimary" onClick={generate} disabled={isGenerating}>
+              <button
+                type="button"
+                className="btn btnPrimary"
+                onClick={generate}
+                disabled={isGenerating}
+              >
                 {isGenerating ? "Generating…" : "Generate"}
               </button>
 
-              <button className="btn" onClick={() => copyText(buildTxtExport())} disabled={!hasOutput || isGenerating}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => copyText(buildTxtExport())}
+                disabled={!hasOutput || isGenerating}
+              >
                 Copy all
               </button>
 
-              <button className="btn" onClick={exportTxt} disabled={!hasOutput || isGenerating}>
+              <button type="button" className="btn" onClick={exportTxt} disabled={!hasOutput || isGenerating}>
                 Export .txt
               </button>
 
-              <button className="btn" onClick={exportJson} disabled={!result || isGenerating}>
+              <button type="button" className="btn" onClick={exportJson} disabled={!result || isGenerating}>
                 Export JSON
               </button>
             </div>
@@ -332,7 +357,7 @@ function Bucket({ title, items, onCopyAll }) {
     <div className="section" style={{ marginTop: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
         <p className="stepTitle">{title}</p>
-        <button className="btn" onClick={onCopyAll} disabled={!list.length}>
+        <button type="button" className="btn" onClick={onCopyAll} disabled={!list.length}>
           Copy
         </button>
       </div>
