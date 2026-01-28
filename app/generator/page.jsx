@@ -9,6 +9,7 @@ export default function GeneratorPage() {
   const [gateMsg, setGateMsg] = useState("");
   const [gateErr, setGateErr] = useState("");
 
+  // Editable inputs
   const [form, setForm] = useState({
     brand_name: "ViralPack.ai",
     product: "SaaS that generates short-form hooks and content concepts",
@@ -121,11 +122,17 @@ export default function GeneratorPage() {
 
   function exportJson() {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    downloadFile(`viralpack-pack-${stamp}.json`, JSON.stringify(result, null, 2), "application/json;charset=utf-8");
+    downloadFile(
+      `viralpack-pack-${stamp}.json`,
+      JSON.stringify(result, null, 2),
+      "application/json;charset=utf-8"
+    );
   }
 
   async function verifyKey(e) {
+    // Mobile Safari will sometimes treat button presses like submits unless we prevent.
     if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
 
     setGateErr("");
     setGateMsg("");
@@ -159,7 +166,7 @@ export default function GeneratorPage() {
       setGateKey("");
       setTimeout(() => setGateMsg(""), 1200);
 
-      // Reload so middleware + page requests see the cookie immediately
+      // Refresh so middleware sees cookie in navigation flow too
       window.location.reload();
     } catch (err) {
       setGateErr(err?.message || "Couldn’t verify key.");
@@ -168,6 +175,8 @@ export default function GeneratorPage() {
 
   async function generate(e) {
     if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+
     if (isGenerating) return;
 
     setIsGenerating(true);
@@ -193,10 +202,7 @@ export default function GeneratorPage() {
       } catch {}
 
       if (!r.ok) {
-        const msg =
-          data?.error ||
-          data?.detail ||
-          `Request failed (${r.status}): ${text.slice(0, 140)}`;
+        const msg = data?.error || data?.detail || `Request failed (${r.status}): ${text.slice(0, 160)}`;
         throw new Error(msg);
       }
 
@@ -291,17 +297,36 @@ export default function GeneratorPage() {
               <button
                 type="button"
                 className="btn"
-                onClick={() => copyText(buildTxtExport())}
+                onClick={(e) => {
+                  e.preventDefault();
+                  copyText(buildTxtExport());
+                }}
                 disabled={!hasOutput || isGenerating}
               >
                 Copy all
               </button>
 
-              <button type="button" className="btn" onClick={exportTxt} disabled={!hasOutput || isGenerating}>
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  exportTxt();
+                }}
+                disabled={!hasOutput || isGenerating}
+              >
                 Export .txt
               </button>
 
-              <button type="button" className="btn" onClick={exportJson} disabled={!result || isGenerating}>
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  exportJson();
+                }}
+                disabled={!result || isGenerating}
+              >
                 Export JSON
               </button>
             </div>
@@ -309,16 +334,30 @@ export default function GeneratorPage() {
             {genMsg ? <div className="toastOk">{genMsg}</div> : null}
             {genErr ? <div className="toastErr">{genErr}</div> : null}
 
-            <p className="smallNote">If you see “Access denied”, re-verify your key.</p>
+            <p className="smallNote">
+              Protected by middleware, requires beta cookie. If you see “Access denied”, re-verify your key.
+            </p>
           </div>
 
           <div className="card">
             <p className="kicker">Output</p>
 
             <Bucket title="TOP HOOKS (5)" items={buckets.hooks} onCopyAll={() => copyText(buckets.hooks.join("\n"))} />
-            <Bucket title="ON-SCREEN OVERLAYS (5)" items={buckets.overlays} onCopyAll={() => copyText(buckets.overlays.join("\n"))} />
-            <Bucket title="CAPTIONS (5)" items={buckets.captions} onCopyAll={() => copyText(buckets.captions.join("\n"))} />
-            <Bucket title="HASHTAGS (5)" items={buckets.hashtags} onCopyAll={() => copyText(buckets.hashtags.join(" "))} />
+            <Bucket
+              title="ON-SCREEN OVERLAYS (5)"
+              items={buckets.overlays}
+              onCopyAll={() => copyText(buckets.overlays.join("\n"))}
+            />
+            <Bucket
+              title="CAPTIONS (5)"
+              items={buckets.captions}
+              onCopyAll={() => copyText(buckets.captions.join("\n"))}
+            />
+            <Bucket
+              title="HASHTAGS (5)"
+              items={buckets.hashtags}
+              onCopyAll={() => copyText(buckets.hashtags.join(" "))}
+            />
           </div>
         </div>
       </main>

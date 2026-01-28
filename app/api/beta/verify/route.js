@@ -23,8 +23,8 @@ function parseKeysList(raw) {
 
 export async function POST(req) {
   try {
-    // Sanity checks
-    mustEnv("BETA_COOKIE_SECRET"); // required by your app design
+    mustEnv("BETA_COOKIE_SECRET"); // sanity check per your design
+
     const allowed = parseKeysList(process.env.BETA_KEYS || "");
     if (!allowed.length) {
       return json(500, { ok: false, error: "Server misconfigured (BETA_KEYS missing)" });
@@ -38,9 +38,8 @@ export async function POST(req) {
       return json(401, { ok: false, error: "Invalid key" });
     }
 
-    // ✅ Mobile-safe cookie attributes
-    // SameSite=Lax works for same-site navigation + fetch.
-    // Secure must be set on HTTPS (Vercel prod).
+    // Mobile-safe cookie attributes:
+    // SameSite=Lax plays nicely with Safari, and still works for same-site fetch.
     const isProd = process.env.NODE_ENV === "production";
     const cookie =
       `vp_beta=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}` +

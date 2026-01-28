@@ -10,13 +10,13 @@ export function middleware(req) {
   if (
     pathname === "/favicon.ico" ||
     pathname === "/bg.jpg" ||
-    pathname === "/logo.png"
+    pathname === "/logo.png" ||
+    pathname.startsWith("/favicon-")
   ) {
     return NextResponse.next();
   }
 
-  // ✅ Always allow the generator page to load
-  // Users need to reach it to enter the beta key.
+  // Always allow the generator page to load (so users can enter the beta key)
   if (pathname.startsWith("/generator")) {
     return NextResponse.next();
   }
@@ -28,7 +28,7 @@ export function middleware(req) {
       return NextResponse.next();
     }
 
-    // ✅ Protect your real generation routes
+    // Protect all produce routes
     if (pathname.startsWith("/api/produce")) {
       const hasCookie = req.cookies.get("vp_beta")?.value;
       if (!hasCookie) {
