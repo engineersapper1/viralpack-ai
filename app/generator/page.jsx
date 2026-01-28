@@ -1,161 +1,408 @@
-export const dynamic = "force-dynamic";
+"use client";
 
-export default function HomePage() {
-  const year = new Date().getFullYear();
+import { useMemo, useState } from "react";
+
+export default function GeneratorPage() {
+  const year = useMemo(() => new Date().getFullYear(), []);
+
+  const [gateKey, setGateKey] = useState("");
+  const [gateMsg, setGateMsg] = useState("");
+  const [gateErr, setGateErr] = useState("");
+
+  // Editable inputs
+  const [form, setForm] = useState({
+    brand_name: "ViralPack.ai",
+    product: "SaaS that generates short-form hooks and content concepts",
+    offer: "Early access waitlist",
+    website: "https://viralpack.ai",
+    market: "Creators, agencies, small businesses",
+  });
+
+  const TOP_K = 5;
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [genMsg, setGenMsg] = useState("");
+  const [genErr, setGenErr] = useState("");
+  const [result, setResult] = useState(null);
+
+  const buckets = useMemo(() => {
+    const out = result?.output || {};
+    return {
+      hooks: Array.isArray(out.hooks) ? out.hooks.slice(0, TOP_K) : [],
+      overlays: Array.isArray(out.on_screen_overlays) ? out.on_screen_overlays.slice(0, TOP_K) : [],
+      captions: Array.isArray(out.captions) ? out.captions.slice(0, TOP_K) : [],
+      hashtags: Array.isArray(out.hashtags) ? out.hashtags.slice(0, TOP_K) : [],
+    };
+  }, [result]);
+
+  function safeText(v) {
+    if (v === null || v === undefined) return "";
+    return String(v);
+  }
+
+  async function copyText(text) {
+    const t = safeText(text).trim();
+    if (!t) return;
+
+    try {
+      await navigator.clipboard.writeText(t);
+      setGenMsg("Copied to clipboard.");
+      setTimeout(() => setGenMsg(""), 1200);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = t;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+        setGenMsg("Copied to clipboard.");
+        setTimeout(() => setGenMsg(""), 1200);
+      } catch {
+        setGenErr("Copy failed in this browser.");
+        setTimeout(() => setGenErr(""), 2000);
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+  }
+
+  function buildTxtExport() {
+    const lines = [];
+    lines.push("ViralPack.ai, Producer Output");
+    lines.push(`Generated: ${new Date().toISOString()}`);
+    lines.push("");
+    lines.push("INPUTS");
+    lines.push(`brand_name: ${safeText(form.brand_name)}`);
+    lines.push(`product: ${safeText(form.product)}`);
+    lines.push(`offer: ${safeText(form.offer)}`);
+    lines.push(`website: ${safeText(form.website)}`);
+    lines.push(`market: ${safeText(form.market)}`);
+    lines.push("");
+    lines.push("============================================================");
+    lines.push("");
+
+    lines.push("TOP HOOKS (5)");
+    buckets.hooks.forEach((h) => lines.push(`- ${h}`));
+    lines.push("");
+
+    lines.push("ON-SCREEN OVERLAYS (5)");
+    buckets.overlays.forEach((o) => lines.push(`- ${o}`));
+    lines.push("");
+
+    lines.push("CAPTIONS (5)");
+    buckets.captions.forEach((c) => lines.push(`- ${c}`));
+    lines.push("");
+
+    lines.push("HASHTAGS (5)");
+    buckets.hashtags.forEach((t) => lines.push(`${t}`));
+    lines.push("");
+
+    return lines.join("\n");
+  }
+
+  function downloadFile(filename, content, mime) {
+    const blob = new Blob([content], { type: mime || "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportTxt() {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadFile(`viralpack-pack-${stamp}.txt`, buildTxtExport(), "text/plain;charset=utf-8");
+  }
+
+  function exportJson() {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    downloadFile(
+      `viralpack-pack-${stamp}.json`,
+      JSON.stringify(result, null, 2),
+      "application/json;charset=utf-8"
+    );
+  }
+
+  async function verifyKey(e) {
+    // Mobile Safari will sometimes treat button presses like submits unless we prevent.
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+
+    setGateErr("");
+    setGateMsg("");
+
+    const key = (gateKey || "").trim();
+    if (!key) {
+      setGateErr("Enter your beta key.");
+      return;
+    }
+
+    try {
+      const r = await fetch("/api/beta/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        body: JSON.stringify({ key }),
+      });
+
+      const text = await r.text();
+      let j = null;
+      try {
+        j = JSON.parse(text);
+      } catch {}
+
+      if (!r.ok || !j?.ok) {
+        throw new Error(j?.error || `Verify failed (${r.status}): ${text.slice(0, 120)}`);
+      }
+
+      setGateMsg("Access granted. You can generate now.");
+      setGateKey("");
+      setTimeout(() => setGateMsg(""), 1200);
+
+      // Refresh so middleware sees cookie in navigation flow too
+      window.location.reload();
+    } catch (err) {
+      setGateErr(err?.message || "Couldn’t verify key.");
+    }
+  }
+
+  async function generate(e) {
+    if (e?.preventDefault) e.preventDefault();
+    if (e?.stopPropagation) e.stopPropagation();
+
+    if (isGenerating) return;
+
+    setIsGenerating(true);
+    setGenErr("");
+    setGenMsg("Generating, please wait…");
+    setResult(null);
+
+    try {
+      const payload = { ...form, top_k: TOP_K };
+
+      const r = await fetch("/api/produce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
+        body: JSON.stringify(payload),
+      });
+
+      const text = await r.text();
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch {}
+
+      if (!r.ok) {
+        const msg = data?.error || data?.detail || `Request failed (${r.status}): ${text.slice(0, 160)}`;
+        throw new Error(msg);
+      }
+
+      setResult(data);
+      setGenMsg("Generated output.");
+    } catch (err) {
+      setGenErr(err?.message || "Couldn’t generate. Check server logs.");
+      setGenMsg("");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  function onChangeField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  const hasOutput =
+    buckets.hooks.length || buckets.overlays.length || buckets.captions.length || buckets.hashtags.length;
 
   return (
     <div className="container">
       <div className="nav">
         <div className="brand">
-          <img
-            src="/logo.png"
-            alt="ViralPack.ai"
-            style={{ width: 38, height: 38, borderRadius: 10 }}
-          />
+          <img src="/logo.png" alt="ViralPack.ai" style={{ width: 38, height: 38, borderRadius: 10 }} />
           <div>
             <h1>ViralPack.ai</h1>
-            <div className="badge">Public launch coming soon</div>
+            <div className="badge">Beta generator</div>
           </div>
         </div>
 
-        <div className="navActions">
-          <a className="btn" href="/generator">
-            Beta access
-          </a>
-          <a className="btn btnPrimary" href="#waitlist">
-            Join waitlist
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a className="btn" href="/">
+            Landing
           </a>
         </div>
       </div>
 
       <main className="hero">
-        <div className="heroGrid heroGridLanding">
+        <div className="heroGrid">
           <div className="card">
-            <p className="kicker">FOR AGENCIES, LOCAL BUSINESSES, CREATORS</p>
-            <h2 className="h1">Generate viral content packs in minutes.</h2>
-
-            <p className="sub">
-              Enter 5 details. Get an agency-ready pack: hooks, overlays, captions, and top hashtags.
-              Built to be fast, specific, and shootable.
-            </p>
+            <p className="kicker">Beta access required</p>
+            <h2 className="h1">Generator</h2>
+            <p className="sub">This runs the full pipeline: Chat → Grok → Chat. Output is top 5 per category.</p>
 
             <div className="hr" />
 
-            <div className="ctaRow">
-              <a className="btn btnPrimary" href="/generator">
-                Try the beta generator
-              </a>
-              <a className="btn" href="#example">
-                See an example
-              </a>
-              <a className="btn" href="#how">
-                How it works
-              </a>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                className="input"
+                value={gateKey}
+                onChange={(e) => setGateKey(e.target.value)}
+                placeholder="Enter beta key"
+                style={{ minWidth: 260 }}
+                disabled={isGenerating}
+              />
+              <button
+                type="button"
+                className="btn btnPrimary"
+                onClick={verifyKey}
+                disabled={isGenerating}
+              >
+                Verify key
+              </button>
             </div>
 
+            {gateMsg ? <div className="toastOk">{gateMsg}</div> : null}
+            {gateErr ? <div className="toastErr">{gateErr}</div> : null}
+
+            <div className="hr" />
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <Field label="Brand name" value={form.brand_name} onChange={(v) => onChangeField("brand_name", v)} />
+              <Field label="Product" value={form.product} onChange={(v) => onChangeField("product", v)} />
+              <Field label="Offer" value={form.offer} onChange={(v) => onChangeField("offer", v)} />
+              <Field label="Website" value={form.website} onChange={(v) => onChangeField("website", v)} />
+              <Field label="Market" value={form.market} onChange={(v) => onChangeField("market", v)} />
+            </div>
+
+            <div className="hr" />
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn btnPrimary"
+                onClick={generate}
+                disabled={isGenerating}
+              >
+                {isGenerating ? "Generating…" : "Generate"}
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  copyText(buildTxtExport());
+                }}
+                disabled={!hasOutput || isGenerating}
+              >
+                Copy all
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  exportTxt();
+                }}
+                disabled={!hasOutput || isGenerating}
+              >
+                Export .txt
+              </button>
+
+              <button
+                type="button"
+                className="btn"
+                onClick={(e) => {
+                  e.preventDefault();
+                  exportJson();
+                }}
+                disabled={!result || isGenerating}
+              >
+                Export JSON
+              </button>
+            </div>
+
+            {genMsg ? <div className="toastOk">{genMsg}</div> : null}
+            {genErr ? <div className="toastErr">{genErr}</div> : null}
+
             <p className="smallNote">
-              Beta requires an access key. Public launch coming soon.
+              Protected by middleware, requires beta cookie. If you see “Access denied”, re-verify your key.
             </p>
           </div>
 
-          <div className="card" id="example">
-            <p className="kicker">EXAMPLE PACK PREVIEW</p>
+          <div className="card">
+            <p className="kicker">Output</p>
 
-            <div className="exampleBox">
-              <div className="mono">
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>TOP HOOKS (5)</div>
-                1. Stop scrolling if you want viral hooks on demand.
-                {"\n"}2. What if AI could draft your next 10 short videos in 30 seconds?
-                {"\n"}3. Tired of blank screens? Watch ViralPack build your first 3 seconds.
-                {"\n"}4. The one tool that turns trends into scripts, fast.
-                {"\n"}5. I tried ViralPack.ai, here’s what happened to my views.
-                {"\n"}
-                {"\n"}
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>ON-SCREEN OVERLAYS (5)</div>
-                1. Generate 50+ hooks in seconds
-                {"\n"}2. Trend-aware concepts, auto-updated
-                {"\n"}3. For creators, agencies, small biz
-                {"\n"}4. Join the early access waitlist
-                {"\n"}5. ViralPack.ai
-                {"\n"}
-                {"\n"}
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>CAPTIONS (5)</div>
-                1. Turn trends into scripts in minutes. Join the waitlist: https://viralpack.ai
-                {"\n"}2. Creators + agencies: get AI hooks that convert. Early access: https://viralpack.ai
-                {"\n"}3. Stop guessing your first 3 seconds. Waitlist: https://viralpack.ai
-                {"\n"}4. From idea drought to post-ready in one click. https://viralpack.ai
-                {"\n"}5. Trend-aware hooks for shorts. Join early access: https://viralpack.ai
-                {"\n"}
-                {"\n"}
-                <div style={{ fontWeight: 800, marginBottom: 8 }}>HASHTAGS (5)</div>
-                #AIHooks #CreatorTools #ViralShorts #EarlyAccessAI #ViralPackWaitlist
-              </div>
-            </div>
+            <Bucket title="TOP HOOKS (5)" items={buckets.hooks} onCopyAll={() => copyText(buckets.hooks.join("\n"))} />
+            <Bucket
+              title="ON-SCREEN OVERLAYS (5)"
+              items={buckets.overlays}
+              onCopyAll={() => copyText(buckets.overlays.join("\n"))}
+            />
+            <Bucket
+              title="CAPTIONS (5)"
+              items={buckets.captions}
+              onCopyAll={() => copyText(buckets.captions.join("\n"))}
+            />
+            <Bucket
+              title="HASHTAGS (5)"
+              items={buckets.hashtags}
+              onCopyAll={() => copyText(buckets.hashtags.join(" "))}
+            />
           </div>
-        </div>
-
-        <div className="card" id="how" style={{ marginTop: 14 }}>
-          <p className="kicker">HOW IT WORKS</p>
-
-          <div style={{ display: "grid", gap: 10, marginTop: 8 }}>
-            <div className="stepRow">
-              <div className="stepNum">1</div>
-              <div>
-                <div className="stepTitle">Enter 5 inputs</div>
-                <div className="stepDesc">Brand, product, offer, website, market. Nothing else.</div>
-              </div>
-            </div>
-
-            <div className="stepRow">
-              <div className="stepNum">2</div>
-              <div>
-                <div className="stepTitle">Generate the pack</div>
-                <div className="stepDesc">Trend-aware structure, creative execution, no fluff.</div>
-              </div>
-            </div>
-
-            <div className="stepRow">
-              <div className="stepNum">3</div>
-              <div>
-                <div className="stepTitle">Copy or export</div>
-                <div className="stepDesc">Copy by bucket, export .txt, export JSON for reuse.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card" id="waitlist" style={{ marginTop: 14 }}>
-          <p className="kicker">JOIN THE WAITLIST</p>
-          <p className="sub" style={{ marginTop: 6 }}>
-            Want access without the “key dance”? Drop your email and I’ll send you a beta key when you’re up.
-          </p>
-
-          {/* Placeholder UI only. Wire this to your /api/waitlist route if you want it live. */}
-          <div className="hr" />
-
-          <div className="waitlistRow">
-            <input className="input" placeholder="you@company.com" />
-            <button className="btn btnPrimary" type="button">
-              Join waitlist
-            </button>
-          </div>
-
-          <p className="smallNote">
-            Tip: If you already have a beta key, go straight to the generator.
-            {" "}
-            <a href="/generator" style={{ color: "rgba(255,255,255,0.9)", textDecoration: "underline" }}>
-              Open generator
-            </a>
-          </p>
         </div>
       </main>
+
+      {result ? (
+        <div className="card" style={{ marginTop: 14 }}>
+          <p className="kicker">Raw JSON (debug)</p>
+          <div className="exampleBox">
+            <div className="mono">{JSON.stringify(result, null, 2)}</div>
+          </div>
+        </div>
+      ) : null}
 
       <footer className="footer">
         <div className="footerRow">
           <div>© {year} ViralPack.ai</div>
-          <div className="mono">Landing</div>
+          <div className="mono">schema_version: {safeText(result?.schema_version || "—")}</div>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange }) {
+  return (
+    <div>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      <input className="input" value={value} onChange={(e) => onChange(e.target.value)} style={{ width: "100%" }} />
+    </div>
+  );
+}
+
+function Bucket({ title, items, onCopyAll }) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="section" style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <p className="stepTitle">{title}</p>
+        <button type="button" className="btn" onClick={onCopyAll} disabled={!list.length}>
+          Copy
+        </button>
+      </div>
+      <div className="exampleBox" style={{ marginTop: 8 }}>
+        <div className="mono">{list.length ? list.map((x, i) => `${i + 1}. ${x}`).join("\n") : "(none yet)"}</div>
+      </div>
     </div>
   );
 }

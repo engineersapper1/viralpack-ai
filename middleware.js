@@ -6,28 +6,29 @@ export function middleware(req) {
   // Always allow Next internals
   if (pathname.startsWith("/_next/")) return NextResponse.next();
 
-  // Always allow public assets
+  // Allow public assets
   if (
     pathname === "/favicon.ico" ||
     pathname === "/bg.jpg" ||
-    pathname === "/logo.png"
+    pathname === "/logo.png" ||
+    pathname.startsWith("/favicon-")
   ) {
     return NextResponse.next();
   }
 
-  // Always allow the generator page to load (so user can enter key on fresh devices)
+  // Always allow the generator page to load (so users can enter the beta key)
   if (pathname.startsWith("/generator")) {
     return NextResponse.next();
   }
 
-  // API handling
+  // API routes
   if (pathname.startsWith("/api/")) {
-    // Always allow verify route (needed to set cookie)
+    // Always allow verification endpoint
     if (pathname.startsWith("/api/beta/verify")) {
       return NextResponse.next();
     }
 
-    // Protect the paid/spendy route
+    // Protect all produce routes
     if (pathname.startsWith("/api/produce")) {
       const hasCookie = req.cookies.get("vp_beta")?.value;
       if (!hasCookie) {
@@ -41,7 +42,7 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
-  // Everything else public
+  // Everything else is public
   return NextResponse.next();
 }
 
