@@ -1,0 +1,16 @@
+node_modules
+.next
+.env
+.env.local
+.env.production
+.DS_Store
+vp_data/sessions/*.json
+node_modules
+.next
+.env
+.env.local
+vp_data
+vp_runs
+*.log
+.DS_Store
+Thumbs.db
