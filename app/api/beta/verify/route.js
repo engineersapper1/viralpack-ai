@@ -9,8 +9,8 @@ export async function POST(req) {
   try {
     const { key } = await req.json();
 
-    if (!VALID_KEYS.includes(String(key || "").trim())) {
-      return NextResponse.json({ error: "Invalid key" }, { status: 401 });
+    if (!key || !VALID_KEYS.includes(String(key).trim())) {
+      return NextResponse.json({ success: false, error: "Invalid access key" }, { status: 401 });
     }
 
     const res = NextResponse.json({ success: true });
@@ -21,8 +21,9 @@ export async function POST(req) {
       path: "/",
       maxAge: 60 * 60 * 12,
     });
+
     return res;
   } catch {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Bad request" }, { status: 400 });
   }
 }

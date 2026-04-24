@@ -10,43 +10,54 @@ export default function Home() {
 
   async function handleLogin(e) {
     e?.preventDefault?.();
-    setStatus("Checking...");
+    setStatus("Checking access...");
+
     try {
       const res = await fetch("/api/beta/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
         credentials: "include",
+        body: JSON.stringify({ key }),
       });
+
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.success) throw new Error(data?.error || "Invalid key");
+      if (!res.ok || !data?.success) throw new Error(data?.error || "Invalid access key");
+
+      setStatus("Access granted. Opening Quiz Forge...");
       router.push("/generator");
-    } catch (error) {
-      setStatus(`❌ ${error?.message || "Login failed"}`);
+      router.refresh();
+    } catch (err) {
+      setStatus(`❌ ${err?.message || "Invalid access key"}`);
     }
   }
 
   return (
-    <main className="shell">
-      <section className="hero heroHome">
-        <div className="kicker">ViralPack, quiz pack forge</div>
-        <h1>Build trend-aware quiz packs for OracleLoom.</h1>
-        <p>
-          One front-door login, no second auth wall, and one export pack per run. Generate the tile title,
-          quiz payload, tile art, promo-video prompt, and pack manifest in one place.
-        </p>
-        <form className="row" style={{ marginTop: 18 }} onSubmit={handleLogin}>
-          <input
-            className="field"
-            type="password"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            placeholder="Enter dev key"
-            style={{ minWidth: 260 }}
-          />
-          <button className="btn" type="submit">Enter generator</button>
-        </form>
-        {status ? <p style={{ marginTop: 12 }}>{status}</p> : null}
+    <main className="container">
+      <section className="hero">
+        <div className="card" style={{ maxWidth: 760, margin: "60px auto" }}>
+          <p className="kicker">ViralPack private console</p>
+          <h1 className="h1">Quiz Forge Access</h1>
+          <p className="sub">
+            Enter the dev key once. After that, the generator opens directly. No second wall inside the forge.
+          </p>
+
+          <form onSubmit={handleLogin} style={{ marginTop: 22 }}>
+            <div className="row" style={{ alignItems: "stretch" }}>
+              <input
+                className="input"
+                type="password"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="Enter dev key"
+                autoComplete="current-password"
+                style={{ flex: 1, minWidth: 260 }}
+              />
+              <button className="btn" type="submit">Enter Forge</button>
+            </div>
+          </form>
+
+          {status ? <p className="muted" style={{ marginTop: 14 }}>{status}</p> : null}
+        </div>
       </section>
     </main>
   );

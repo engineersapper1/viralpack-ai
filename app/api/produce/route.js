@@ -7,7 +7,6 @@ import {
   waitForOpenAIVideo,
   downloadOpenAIVideoBuffer,
 } from "@/lib/ai";
-import { ensureRunDir, writeJson, writeText } from "@/lib/vp_runs";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -168,8 +167,38 @@ function svgTile(title, subtitle) {
 </svg>`;
 }
 
-function writeBuffer(filePath, buffer) {
+function getRunsRoot() {
+  // Vercel deploy bundles live under /var/task, which is not a safe write target.
+  // Local desktop runs still use VP_RUNS_DIR=vp_runs so you can retrieve packs from your project folder.
+  if (process.env.VERCEL === "1") {
+    return path.join("/tmp", "vp_runs");
+  }
+  return path.resolve(process.cwd(), process.env.VP_RUNS_DIR || "vp_runs");
+}
+
+function ensureRunDir(runId) {
+  const root = getRunsRoot();
+  const dir = path.join(root, runId);
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function ensureParent(filePath) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
+}
+
+function writeJson(filePath, value) {
+  ensureParent(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(value, null, 2), "utf8");
+}
+
+function writeText(filePath, value) {
+  ensureParent(filePath);
+  fs.writeFileSync(filePath, String(value ?? ""), "utf8");
+}
+
+function writeBuffer(filePath, buffer) {
+  ensureParent(filePath);
   fs.writeFileSync(filePath, buffer);
 }
 
@@ -236,6 +265,10 @@ export async function POST(req) {
 
     return json({
       ok: true,
+      storage_mode: process.env.VERCEL === "1" ? "vercel_tmp_ephemeral" : "local_desktop_vp_runs",
+      note: process.env.VERCEL === "1"
+        ? "Generated files were written to /tmp for this request only. For drag-and-drop packs, run ViralPack locally so the pack persists under VP_RUNS_DIR."
+        : "Generated files were written to your local VP_RUNS_DIR folder.",
       run_id: runId,
       pack_slug: quiz.public_slug,
       pack_dir: packDir,
