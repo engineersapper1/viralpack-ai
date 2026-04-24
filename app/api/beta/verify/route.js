@@ -10,11 +10,10 @@ export async function POST(req) {
     const { key } = await req.json();
 
     if (!VALID_KEYS.includes(String(key || "").trim())) {
-      return NextResponse.json({ ok: false, error: "Invalid key" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid key" }, { status: 401 });
     }
 
-    const res = NextResponse.json({ ok: true, success: true });
-
+    const res = NextResponse.json({ success: true });
     res.cookies.set("vp_beta", "1", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -22,9 +21,8 @@ export async function POST(req) {
       path: "/",
       maxAge: 60 * 60 * 12,
     });
-
     return res;
   } catch {
-    return NextResponse.json({ ok: false, error: "Bad request" }, { status: 400 });
+    return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
 }
