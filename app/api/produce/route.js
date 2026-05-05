@@ -1,284 +1,368 @@
-import fs from "fs";
-import path from "path";
-import {
-  callOpenAIJson,
-  callXaiJson,
-  createOpenAIVideoJob,
-  waitForOpenAIVideo,
-  downloadOpenAIVideoBuffer,
-} from "@/lib/ai";
+// app/api/produce/route.js
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-function json(data, init = {}) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status: init.status || 200,
-    headers: { "Content-Type": "application/json", ...(init.headers || {}) },
+// --- helpers ---
+function json(status, obj) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
-function clampStr(value, len = 180, fallback = "") {
-  const s = String(value ?? "").trim() || fallback;
-  return s.slice(0, len);
+function mustEnv(name) {
+  const v = process.env[name];
+  if (!v || !String(v).trim()) throw new Error(`Missing env var: ${name}`);
+  return String(v).trim();
 }
 
-function slugify(value, fallback = "quiz-pack") {
-  const s = String(value || fallback)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 80);
-  return s || fallback;
+function clampStr(v, max = 400) {
+  const s = String(v ?? "").trim();
+  return s.length > max ? s.slice(0, max) : s;
 }
 
-function ensureAuth(req) {
-  const cookie = req.headers.get("cookie") || "";
-  if (!cookie.includes("vp_beta=1")) {
-    throw new Error("Unauthorized");
+function clampArr(a, topK) {
+  return Array.isArray(a)
+    ? a.map((x) => String(x).trim()).filter(Boolean).slice(0, topK)
+    : [];
+}
+
+// Best-effort extract TEXT from OpenAI Responses payload
+function extractOutputText(resJson) {
+  if (!resJson) return "";
+  if (typeof resJson.output_text === "string" && resJson.output_text.trim()) {
+    return resJson.output_text;
   }
-}
 
-function themeFallback(input) {
-  const topic = clampStr(input.quiz_theme, 120, "Hidden relationship pattern");
-  const slug = slugify(input.title_title || topic, "hidden-relationship-pattern");
-  const labels = ["Signal Reader", "Gravity Keeper", "Mirror Chaser", "Storm Translator", "Quiet Strategist", "Attachment Hacker"];
-  const archetypeCount = Math.max(3, Math.min(6, Number(input.archetype_count || 4)));
-  const qCount = Math.max(5, Math.min(10, Number(input.question_count || 7)));
-  const archetypes = Array.from({ length: archetypeCount }).map((_, i) => ({
-    id: `type_${i + 1}`,
-    label: labels[i % labels.length],
-    headline: `${labels[i % labels.length]}, with the mask off`,
-    preview: `You have a consistent pattern around ${topic.toLowerCase()}, and it shows up faster than you probably admit out loud.`,
-  }));
-  const questions = Array.from({ length: qCount }).map((_, qi) => ({
-    id: `q${qi + 1}`,
-    prompt: [
-      `What happens first when ${topic.toLowerCase()} gets triggered?`,
-      `Which kind of tension keeps replaying in your head later?`,
-      `What kind of behavior makes you read between the lines instantly?`,
-      `Which version of chaos weirdly sharpens you?`,
-      `What drains you fastest in close relationships?`,
-      `What do you wish people understood without making you say it?`,
-      `When you feel the tone shift, what do you do next?`,
-      `What kind of closeness feels safest to you?`,
-    ][qi % 8],
-    options: archetypes.slice(0, 4).map((a, oi) => ({
-      id: `q${qi + 1}_${String.fromCharCode(97 + oi)}`,
-      label: [
-        "I read the room before anyone names it.",
-        "I lock onto details and try to decode the pattern.",
-        "I go quiet and pull inward before I react.",
-        "I test the energy before I trust what I’m seeing.",
-      ][oi],
-      archetype_weights: { [a.id]: 3, [archetypes[(oi + 1) % archetypes.length].id]: 1 },
-    })),
-  }));
+  const out = resJson.output;
+  if (!Array.isArray(out) || !out.length) return "";
 
-  const quiz = {
-    quiz_id: slug,
-    public_slug: slug,
-    title_title: clampStr(input.title_title, 120, "What Pattern Runs Your Love Life?"),
-    title: clampStr(input.title_title, 120, "What Pattern Runs Your Love Life?"),
-    short_hook: `Fast, sharp, and a little invasive. ${topic} tends to reveal itself quickly.`,
-    paywall: {
-      price: Number(input.price_usd || 1),
-      teaser: "Unlock the full reading to see your core driver, blind spot, relationship pattern, and what shifts your dynamic fastest.",
-    },
-    result_archetypes: archetypes,
-    questions,
-    premium_prompt_template: {
-      system: "You write premium psychology-style quiz readings that feel intimate, sharp, grounded, and worth paying for.",
-      user_template: "Use the dominant archetype, score spread, and the user’s answer pattern to write a premium reading with these sections: Core driver, Blind spot, Relationship pattern, Power zone, Reset advice, and Power phrase.",
-    },
-    pack: {
-      theme: topic,
-      audience_vibe: input.audience_vibe,
-      tone: input.tone,
-    },
-  };
-
-  const manifest = {
-    pack_id: slug,
-    slug,
-    title_title: quiz.title_title,
-    tile_title: quiz.title_title,
-    tile_image: "tile-image.svg",
-    promo_video: fs.existsSync ? "promo-video.mp4" : null,
-    promo_video_prompt: "promo-video.prompt.txt",
-    quiz_file: "quiz.json",
-    price_usd: Number(input.price_usd || 1),
-    is_published: true,
-  };
-
-  const tilePrompt = `Create a stylized tile image for a premium social quiz titled "${quiz.title_title}". Theme: ${topic}. Audience vibe: ${input.audience_vibe}. Tone: ${input.tone}. Visual should feel current, glossy, moody, cinematic, and highly clickable.`;
-  const videoPrompt = `Create a short promo video for a premium self-discovery quiz titled "${quiz.title_title}". Theme: ${topic}. Show motion, tension, curiosity, and quick emotional recognition. No talking head, no explainer, no narration. End with a feeling of unresolved curiosity.`;
-
-  return { trend_packet: { selected_topic: topic, angle: `Trend-leaning quiz about ${topic.toLowerCase()}`, created_at: new Date().toISOString() }, quiz, manifest, tilePrompt, videoPrompt };
-}
-
-function trendPrompt(input) {
-  return `You are Grok-style trend scout.
-Return one JSON object with keys: selected_topic, angle, why_now, audience, emotional_drivers, visual_signatures.
-Goal: create a current short-form quiz concept.
-Theme seed: ${input.quiz_theme}
-Audience vibe: ${input.audience_vibe}
-Tone: ${input.tone}
-Trend hint: ${input.trend_hint}`;
-}
-
-function quizPrompt(input, trend) {
-  return `You are building a premium OracleLoom quiz pack.
-Return JSON only.
-Include keys: quiz_id, public_slug, title_title, title, short_hook, paywall, result_archetypes, questions, premium_prompt_template.
-Constraints:
-- Theme: ${input.quiz_theme}
-- Audience vibe: ${input.audience_vibe}
-- Tone: ${input.tone}
-- Price: ${input.price_usd}
-- Question count target: ${input.question_count}
-- Archetype count target: ${input.archetype_count}
-- Trend packet: ${JSON.stringify(trend)}
-Rules:
-- title_title must be a short sweet hook for a tile
-- title can match title_title or expand it slightly
-- questions must be mobile-native, emotionally revealing, and fast
-- every option must include archetype_weights
-- premium_prompt_template must help produce a paid custom reading
-- output valid JSON only`;
-}
-
-function svgTile(title, subtitle) {
-  const esc = (s) => String(s || "").replace(/[&<>]/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0b1020"/>
-      <stop offset="0.55" stop-color="#3d1a78"/>
-      <stop offset="1" stop-color="#dd2e7b"/>
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" rx="32" fill="url(#g)"/>
-  <circle cx="910" cy="170" r="190" fill="rgba(255,255,255,0.08)"/>
-  <circle cx="1000" cy="470" r="220" fill="rgba(255,255,255,0.05)"/>
-  <text x="78" y="140" fill="#F3EFFF" font-size="26" font-family="Arial, Helvetica, sans-serif" opacity="0.9">ORACLELOOM QUIZ</text>
-  <text x="78" y="280" fill="white" font-size="76" font-weight="700" font-family="Arial, Helvetica, sans-serif">${esc(title)}</text>
-  <text x="78" y="360" fill="#F8D4E8" font-size="30" font-family="Arial, Helvetica, sans-serif">${esc(subtitle)}</text>
-  <rect x="78" y="420" width="260" height="64" rx="32" fill="rgba(255,255,255,0.16)"/>
-  <text x="118" y="462" fill="white" font-size="28" font-family="Arial, Helvetica, sans-serif">Take the quiz</text>
-</svg>`;
-}
-
-function getRunsRoot() {
-  // Vercel deploy bundles live under /var/task, which is not a safe write target.
-  // Local desktop runs still use VP_RUNS_DIR=vp_runs so you can retrieve packs from your project folder.
-  if (process.env.VERCEL === "1") {
-    return path.join("/tmp", "vp_runs");
+  const parts = [];
+  for (const item of out) {
+    const content = item?.content;
+    if (!Array.isArray(content)) continue;
+    for (const c of content) {
+      if (typeof c?.text === "string") parts.push(c.text);
+      if (c?.type === "output_text" && typeof c?.text === "string") parts.push(c.text);
+      if (typeof c?.content === "string") parts.push(c.content);
+    }
   }
-  return path.resolve(process.cwd(), process.env.VP_RUNS_DIR || "vp_runs");
+  return parts.join("\n");
 }
 
-function ensureRunDir(runId) {
-  const root = getRunsRoot();
-  const dir = path.join(root, runId);
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+// Pull the FIRST valid JSON object from a string.
+function parseFirstJsonObject(text) {
+  const s = String(text || "").trim();
+  if (!s) return null;
+
+  const firstBrace = s.indexOf("{");
+  if (firstBrace < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = firstBrace; i < s.length; i++) {
+    const ch = s[i];
+
+    if (inString) {
+      if (escape) {
+        escape = false;
+      } else if (ch === "\\") {
+        escape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+
+    if (depth === 0) {
+      const candidate = s.slice(firstBrace, i + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
 }
 
-function ensureParent(filePath) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+// --- OpenAI (Responses API) ---
+async function callOpenAIResponses({ apiKey, model, inputText }) {
+  const r = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      input: inputText,
+    }),
+  });
+
+  const data = await r.json().catch(() => null);
+
+  if (!r.ok) {
+    const msg =
+      data?.error?.message ||
+      data?.error?.type ||
+      `OpenAI request failed (${r.status})`;
+    throw new Error(msg);
+  }
+
+  const text = extractOutputText(data);
+  return { raw: data, text };
 }
 
-function writeJson(filePath, value) {
-  ensureParent(filePath);
-  fs.writeFileSync(filePath, JSON.stringify(value, null, 2), "utf8");
-}
+// --- xAI (OpenAI-compatible chat completions) ---
+async function callXaiChatCompletions({ apiKey, model, messages }) {
+  const r = await fetch("https://api.x.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.2,
+    }),
+  });
 
-function writeText(filePath, value) {
-  ensureParent(filePath);
-  fs.writeFileSync(filePath, String(value ?? ""), "utf8");
-}
+  const data = await r.json().catch(() => null);
 
-function writeBuffer(filePath, buffer) {
-  ensureParent(filePath);
-  fs.writeFileSync(filePath, buffer);
+  if (!r.ok) {
+    const msg =
+      data?.error?.message ||
+      data?.error ||
+      `xAI request failed (${r.status})`;
+    throw new Error(msg);
+  }
+
+  const text = data?.choices?.[0]?.message?.content || "";
+  return { raw: data, text };
 }
 
 export async function POST(req) {
+  const startedAt = Date.now();
+
   try {
-    ensureAuth(req);
-    const body = await req.json().catch(() => ({}));
-    const input = {
-      quiz_theme: clampStr(body?.quiz_theme, 160, "Hidden relationship pattern"),
-      audience_vibe: clampStr(body?.audience_vibe, 180, "women 18-34, sharp, self-aware, slightly dark, highly shareable"),
-      tone: clampStr(body?.tone, 180, "intimate, cinematic, a little invasive, premium, not cheesy"),
-      trend_hint: clampStr(body?.trend_hint, 220, "current short-form self-discovery energy"),
-      title_title: clampStr(body?.title_title, 120, "What Pattern Runs Your Love Life?"),
-      question_count: Math.max(5, Math.min(10, Number(body?.question_count || 7))),
-      archetype_count: Math.max(3, Math.min(6, Number(body?.archetype_count || 4))),
-      price_usd: Number(body?.price_usd || 1),
-    };
+    const isProd = process.env.NODE_ENV === "production";
 
-    const fallback = themeFallback(input);
-    const trendPacket = await callXaiJson(trendPrompt(input), () => fallback.trend_packet);
-    const quizRaw = await callOpenAIJson(quizPrompt(input, trendPacket), () => fallback.quiz);
-    const quiz = {
-      ...fallback.quiz,
-      ...(quizRaw || {}),
-      title_title: clampStr(quizRaw?.title_title, 120, fallback.quiz.title_title),
-      title: clampStr(quizRaw?.title, 160, fallback.quiz.title),
-      quiz_id: slugify(quizRaw?.quiz_id || quizRaw?.public_slug || fallback.quiz.quiz_id, fallback.quiz.quiz_id),
-      public_slug: slugify(quizRaw?.public_slug || quizRaw?.quiz_id || fallback.quiz.public_slug, fallback.quiz.public_slug),
-    };
-    const manifest = { ...fallback.manifest, pack_id: quiz.public_slug, slug: quiz.public_slug, title_title: quiz.title_title, tile_title: quiz.title_title, price_usd: input.price_usd };
+    // Option A: trusted internal bypass
+    // In prod: require either internal header OR vp_beta cookie.
+    if (isProd) {
+      const cookie = req.headers.get("cookie") || "";
+      const internalSecret = mustEnv("BETA_COOKIE_SECRET");
+      const internalHeader = String(req.headers.get("x-vp-internal") || "").trim();
+      const isInternal = internalHeader && internalHeader === internalSecret;
 
-    const runId = `quizpack_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const runDir = ensureRunDir(runId);
-    const packDir = path.join(runDir, quiz.public_slug);
-    fs.mkdirSync(packDir, { recursive: true });
-
-    const tilePrompt = fallback.tilePrompt;
-    const videoPrompt = fallback.videoPrompt;
-    const promoScript = `Title: ${quiz.title_title}\nHook: ${quiz.short_hook}\nBeat 1: show the emotional pattern before naming it.\nBeat 2: increase curiosity with close details and contrast.\nBeat 3: end on tension, not explanation.\nCTA: take the quiz.`;
-
-    writeJson(path.join(runDir, "input.json"), input);
-    writeJson(path.join(runDir, "trend_packet.json"), trendPacket);
-    writeJson(path.join(packDir, "manifest.json"), manifest);
-    writeJson(path.join(packDir, "quiz.json"), quiz);
-    writeText(path.join(packDir, "promo-video.prompt.txt"), videoPrompt);
-    writeText(path.join(packDir, "promo-script.txt"), promoScript);
-    writeText(path.join(packDir, "tile-image.prompt.txt"), tilePrompt);
-    writeText(path.join(packDir, "tile-image.svg"), svgTile(quiz.title_title, quiz.short_hook));
-
-    let files = ["manifest.json", "quiz.json", "tile-image.svg", "tile-image.prompt.txt", "promo-video.prompt.txt", "promo-script.txt"];
-
-    try {
-      if (process.env.OPENAI_API_KEY) {
-        const job = await createOpenAIVideoJob({ prompt: videoPrompt, seconds: "4", size: "720x1280" });
-        const done = await waitForOpenAIVideo(job.id, { pollMs: 4000, timeoutMs: 180000 });
-        const buffer = await downloadOpenAIVideoBuffer(done.id || job.id);
-        writeBuffer(path.join(packDir, "promo-video.mp4"), buffer);
-        files.push("promo-video.mp4");
+      if (!isInternal && !cookie.includes("vp_beta=1")) {
+        return json(401, { ok: false, error: "Access denied (missing beta cookie)" });
       }
-    } catch (videoError) {
-      writeText(path.join(packDir, "video-error.txt"), String(videoError?.message || videoError));
-      files.push("video-error.txt");
     }
 
-    return json({
-      ok: true,
-      storage_mode: process.env.VERCEL === "1" ? "vercel_tmp_ephemeral" : "local_desktop_vp_runs",
-      note: process.env.VERCEL === "1"
-        ? "Generated files were written to /tmp for this request only. For drag-and-drop packs, run ViralPack locally so the pack persists under VP_RUNS_DIR."
-        : "Generated files were written to your local VP_RUNS_DIR folder.",
-      run_id: runId,
-      pack_slug: quiz.public_slug,
-      pack_dir: packDir,
-      quiz,
-      manifest,
-      trend_packet: trendPacket,
-      files,
+    // Required env vars
+    const OPENAI_API_KEY = mustEnv("OPENAI_API_KEY");
+    const XAI_API_KEY = mustEnv("XAI_API_KEY");
+    mustEnv("BETA_COOKIE_SECRET");
+
+    // Optional model overrides
+    const OPENAI_MODEL = (process.env.OPENAI_MODEL || "gpt-4.1-mini").trim();
+    const XAI_MODEL = (process.env.XAI_MODEL || "grok-4-fast-non-reasoning").trim();
+
+    // Body parse
+    const body = await req.json().catch(() => null);
+    if (!body) return json(400, { ok: false, error: "Bad JSON body" });
+
+    const top_k = Math.min(Math.max(parseInt(body?.top_k ?? 5, 10), 1), 5);
+
+    const input = {
+      brand_name: clampStr(body?.brand_name, 120),
+      product: clampStr(body?.product, 280),
+      offer: clampStr(body?.offer, 280),
+      website: clampStr(body?.website, 200),
+      market: clampStr(body?.market, 280),
+      top_k,
+    };
+
+    const missing = Object.entries(input)
+      .filter(([k, v]) => k !== "top_k" && !v)
+      .map(([k]) => k);
+
+    if (missing.length) {
+      return json(400, { ok: false, error: `Missing fields: ${missing.join(", ")}` });
+    }
+
+    // 1) Planner -> decide Grok queries
+    const plannerPrompt = `
+Return ONLY a valid JSON object. No markdown, no commentary, no extra text.
+
+Schema:
+{
+  "trend_queries": ["... up to 5 strings ..."],
+  "angle_notes": "short string"
+}
+
+Rules:
+- Exactly ONE JSON object.
+- trend_queries should be concrete and specific for TikTok/IG Reels right now.
+
+Inputs:
+brand_name: ${input.brand_name}
+product: ${input.product}
+offer: ${input.offer}
+website: ${input.website}
+market: ${input.market}
+`.trim();
+
+    const planner = await callOpenAIResponses({
+      apiKey: OPENAI_API_KEY,
+      model: OPENAI_MODEL,
+      inputText: plannerPrompt,
     });
-  } catch (error) {
-    const status = String(error?.message || "").includes("Unauthorized") ? 401 : 500;
-    return json({ ok: false, error: error?.message || "Pack generation failed" }, { status });
+
+    const planJson = parseFirstJsonObject(planner.text) || {
+      trend_queries: [],
+      angle_notes: "",
+    };
+
+    const trendQueries = Array.isArray(planJson.trend_queries)
+      ? planJson.trend_queries.slice(0, 5).map((s) => String(s).trim()).filter(Boolean)
+      : [];
+    const angleNotes = clampStr(planJson.angle_notes || "", 600);
+
+    // 2) Grok trend scan
+    const grokPrompt = `
+You are doing trend reconnaissance for short-form video.
+Return concise bullets only.
+
+Market: ${input.market}
+Product: ${input.product}
+Offer: ${input.offer}
+Brand: ${input.brand_name}
+
+Trend queries:
+${trendQueries.length ? trendQueries.map((q, i) => `${i + 1}. ${q}`).join("\n") : "- (no queries provided)"}
+
+Deliver:
+- 8 to 12 trend bullet insights
+- 6 to 10 phrases, hook styles currently performing
+- 10 to 20 relevant hashtags (not generic)
+`.trim();
+
+    const grok = await callXaiChatCompletions({
+      apiKey: XAI_API_KEY,
+      model: XAI_MODEL,
+      messages: [
+        { role: "system", content: "You are a trend analyst. Be concise and concrete." },
+        { role: "user", content: grokPrompt },
+      ],
+    });
+
+    // 3) Final pack -> strict JSON
+    const finalPrompt = `
+Return ONLY a valid JSON object. No markdown, no code fences, no commentary, no leading or trailing text.
+
+Schema:
+{
+  "schema_version": "vp_pack_v1",
+  "input": { "brand_name": "...", "product": "...", "offer": "...", "website": "...", "market": "...", "top_k": ${top_k} },
+  "output": {
+    "hooks": [${top_k} strings],
+    "on_screen_overlays": [${top_k} strings],
+    "captions": [${top_k} strings],
+    "hashtags": [${top_k} strings],
+    "scripts": [${top_k} strings]
+  }
+}
+
+Hard rules:
+- Exactly ${top_k} items per array.
+- Plain strings, no numbering, no bullets.
+- Hashtags must include the # symbol.
+- scripts: micro-script for a 4s clip, max 12 words.
+
+Inputs:
+${JSON.stringify(input, null, 2)}
+
+Angle notes:
+${angleNotes}
+
+Trend insights (Grok):
+${grok.text}
+`.trim();
+
+    const finalRes = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        input: finalPrompt,
+        text: { format: { type: "json_object" } },
+      }),
+    });
+
+    const finalData = await finalRes.json().catch(() => null);
+
+    if (!finalRes.ok) {
+      const msg =
+        finalData?.error?.message ||
+        finalData?.error?.type ||
+        `OpenAI request failed (${finalRes.status})`;
+      throw new Error(msg);
+    }
+
+    const finalText = extractOutputText(finalData);
+    const pack = parseFirstJsonObject(finalText);
+
+    if (!pack?.output) {
+      return json(502, {
+        ok: false,
+        error: "Final model did not return valid JSON",
+        debug: {
+          planner_text: planner.text,
+          grok_text: grok.text,
+          final_text: finalText,
+        },
+      });
+    }
+
+    const out = pack.output || {};
+    const response = {
+      ok: true,
+      schema_version: "vp_pack_v1",
+      generated_at: new Date().toISOString(),
+      input,
+      output: {
+        hooks: clampArr(out.hooks, top_k),
+        on_screen_overlays: clampArr(out.on_screen_overlays, top_k),
+        captions: clampArr(out.captions, top_k),
+        hashtags: clampArr(out.hashtags, top_k),
+        scripts: clampArr(out.scripts, top_k),
+      },
+      debug: {
+        timings_ms: { total: Date.now() - startedAt },
+        models: { openai: OPENAI_MODEL, xai: XAI_MODEL },
+      },
+    };
+
+    return json(200, response);
+  } catch (e) {
+    return json(500, { ok: false, error: e?.message || String(e) });
   }
 }

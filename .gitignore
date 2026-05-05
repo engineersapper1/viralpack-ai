@@ -14,3 +14,17 @@ vp_runs
 *.log
 .DS_Store
 Thumbs.db
+.env.local
+.env
+.next
+node_modules
+
+.env.local
+.env
+.next
+node_modules
+
+.env.local
+.env
+.next
+node_modules

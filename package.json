@@ -1,19 +1,32 @@
 {
-  "name": "viralpack-v3-quiz-engine",
+  "name": "viralpack-client-mailroom-beta",
+  "version": "0.1.0-beta.1",
   "private": true,
-  "version": "3.1.0",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.101.1",
-    "next": "^16.2.1",
-    "openai": "^6.22.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "stripe": "^18.0.0"
+    "@supabase/supabase-js": "^2.105.3",
+    "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
+    "next": "^9.3.3",
+    "openai": "^6.36.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "resend": "^6.1.3",
+    "stripe": "^22.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.2.4"
   }
 }
