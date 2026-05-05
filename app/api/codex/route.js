@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 
 export const runtime = "nodejs"; // important: keep this off edge for now
 
@@ -14,10 +14,10 @@ export async function POST(req) {
       current_file_content = "",
     } = body;
 
-    // Codex-tuned model in the API is gpt-5.2-codex :contentReference[oaicite:2]{index=2}
+    // Codex-tuned model in the API is gpt-5.2-codex 
     const response = await client.responses.create({
       model: "gpt-5.2-codex",
-      reasoning: { effort: "high" }, // low|medium|high|xhigh :contentReference[oaicite:3]{index=3}
+      reasoning: { effort: "high" }, // low|medium|high|xhigh 
       input: [
         {
           role: "system",
@@ -54,7 +54,7 @@ export async function POST(req) {
         },
       ],
       // If you want to hard-enforce JSON, you can also use Structured Outputs.
-      // See Structured Outputs guide. :contentReference[oaicite:4]{index=4}
+      // See Structured Outputs guide. 
     });
 
     const text = response.output_text ?? "";

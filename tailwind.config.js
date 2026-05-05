@@ -1,19 +1,24 @@
-/** @type {import('tailwindcss').Config} */
-export default {
+﻿/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
-    './app/**/*.{js,jsx}',
-    './components/**/*.{js,jsx}',
-    './lib/**/*.{js,jsx}'
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "!./app/api/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}"
+  ],
+  blocklist: [
+    "[-:.TZ]",
+    "[oaicite:2]",
+    "[oaicite:3]",
+    "[oaicite:4]",
+    "[oaicite:5]"
   ],
   theme: {
     extend: {
       colors: {
-        ink: '#10131A',
-        brass: '#D7A84F',
-        fog: '#F4F1EA'
+        ink: "#101014"
       },
       boxShadow: {
-        soft: '0 18px 60px rgba(10, 13, 20, 0.13)'
+        soft: "0 18px 60px rgba(15,23,42,0.12)"
       }
     }
   },
