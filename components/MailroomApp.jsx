@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 
@@ -226,9 +226,9 @@ export default function MailroomApp({ session }) {
   ];
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff6d6,transparent_34%),linear-gradient(135deg,#f8f6f0,#ece7dc)] px-5 py-8">
-      <section className="mx-auto max-w-7xl">
-        <header className="mailroom-card p-6 md:p-8">
+    <main className="mailroom-page">
+      <section className="container">
+        <header className="card mailroom-hero">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.35em] text-black/45">ViralPack beta room</p>
@@ -241,7 +241,7 @@ export default function MailroomApp({ session }) {
           </div>
         </header>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="row mailroom-tabs">
           {tabs.map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} className={tab === id ? 'mailroom-button' : 'mailroom-button-secondary'}>{label}</button>
           ))}
@@ -320,7 +320,7 @@ export default function MailroomApp({ session }) {
           <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="mailroom-card mt-6 p-6 md:p-8">
               <h2 className="text-3xl font-black">Build campaign</h2>
-              <p className="mt-2 leading-7 text-black/65">The generator is instructed to keep the client’s voice short, useful, and native. No bot confetti.</p>
+              <p className="mt-2 leading-7 text-black/65">The generator is instructed to keep the clientâ€™s voice short, useful, and native. No bot confetti.</p>
               <div className="mt-6 grid gap-4">
                 <label className="grid gap-2">
                   <span className="mailroom-label">Mode</span>
@@ -454,3 +454,5 @@ function buildClientPreviewHtml(campaign, profile) {
   const paragraphs = Array.isArray(campaign.body_paragraphs) ? campaign.body_paragraphs : [];
   return `<!doctype html><html><body style="margin:0;background:${escapePreview(background)};font-family:Arial,Helvetica,sans-serif;padding:24px;"><div style="max-width:640px;margin:auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid rgba(0,0,0,.08);"><div style="padding:28px 28px 8px;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:${escapePreview(accent)};font-weight:700;">${escapePreview(profile.business_name || '')}</div><h1 style="margin:12px 0 14px;color:${escapePreview(primary)};font-size:30px;line-height:1.12;">${escapePreview(campaign.headline || campaign.selected_subject || '')}</h1></div>${images.map((url) => `<img src="${escapePreview(url)}" style="width:100%;display:block;max-width:600px;margin:0 auto 18px;border-radius:18px;" />`).join('')}<div style="padding:8px 28px 30px;">${paragraphs.map((p) => `<p style="margin:0 0 16px;color:#252525;font-size:16px;line-height:1.62;">${escapePreview(p)}</p>`).join('')}${campaign.cta_url ? `<div style="margin-top:24px;"><a href="${escapePreview(campaign.cta_url)}" style="display:inline-block;background:${escapePreview(primary)};color:#fff;text-decoration:none;border-radius:999px;padding:13px 20px;font-weight:700;">${escapePreview(campaign.cta_label || 'Book now')}</a></div>` : ''}</div></div><div style="max-width:640px;margin:18px auto 0;text-align:center;color:#777;font-size:12px;line-height:1.6;">${escapePreview(profile.address_line1 || '')}<br />${escapePreview([profile.city, profile.state, profile.postal_code].filter(Boolean).join(', '))}<br /><br /><u>Unsubscribe</u></div></body></html>`;
 }
+
+
