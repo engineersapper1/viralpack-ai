@@ -72,11 +72,7 @@ select {
   max-width: 780px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
-}
+
 
 .card {
   background: var(--panel);
@@ -554,3 +550,218 @@ select {
 }
 
 /* === CLIENT MAILROOM VP THEME END === */
+
+/* === VIRALPACK HOME FIX START === */
+
+.vp-home {
+  min-height: 100vh;
+  padding: 28px 0 56px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.18), transparent 24%),
+    linear-gradient(180deg, #050b15 0%, #08101d 100%);
+}
+
+.vp-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 12px 0 34px;
+}
+
+.vp-title {
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+}
+
+.vp-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.vp-hero-card {
+  padding: clamp(24px, 4vw, 44px);
+}
+
+.vp-hero-card h2 {
+  margin: 18px 0 16px;
+  color: var(--text);
+  font-size: clamp(3rem, 7vw, 6.8rem);
+  line-height: 0.92;
+  letter-spacing: -0.07em;
+}
+
+.vp-feature-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vp-feature-card {
+  padding: 22px;
+}
+
+.vp-feature-card h3 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 1.35rem;
+}
+
+.vp-feature-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.vp-home .sub {
+  color: var(--muted);
+  line-height: 1.75;
+  font-size: 1.05rem;
+  max-width: 760px;
+  margin-bottom: 26px;
+}
+
+@media (max-width: 900px) {
+  .vp-nav {
+    flex-direction: column;
+  }
+
+  .vp-hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vp-hero-card h2 {
+    font-size: clamp(3rem, 16vw, 5rem);
+  }
+}
+
+/* === VIRALPACK HOME FIX END === */
+
+/* === CLIENT MAILROOM DARK FIX START === */
+
+.mailroom-page {
+  min-height: 100vh;
+  padding: 28px 0 48px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.24), transparent 28%),
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.18), transparent 24%),
+    linear-gradient(180deg, #050b15 0%, #08101d 100%);
+}
+
+.mailroom-hero {
+  padding: 26px;
+}
+
+.mailroom-tabs {
+  margin-top: 18px;
+}
+
+.mailroom-page .mailroom-card,
+.mailroom-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28);
+}
+
+.mailroom-page h1,
+.mailroom-page h2,
+.mailroom-page h3,
+.mailroom-card h1,
+.mailroom-card h2,
+.mailroom-card h3 {
+  color: var(--text);
+}
+
+.mailroom-page p,
+.mailroom-page span,
+.mailroom-page label {
+  color: inherit;
+}
+
+.mailroom-page .text-black\/45,
+.mailroom-page .text-black\/50,
+.mailroom-page .text-black\/60,
+.mailroom-page .text-black\/65,
+.mailroom-page .text-black\/70 {
+  color: var(--muted) !important;
+}
+
+.mailroom-page .bg-white,
+.mailroom-page .bg-white\/90 {
+  background: var(--panel) !important;
+}
+
+.mailroom-page .bg-black\/5 {
+  background: rgba(148, 163, 184, 0.08) !important;
+}
+
+.mailroom-page .border-black\/10 {
+  border-color: var(--line) !important;
+}
+
+.mailroom-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(8, 15, 27, 0.92);
+  color: var(--text);
+  padding: 12px 14px;
+  outline: none;
+}
+
+.mailroom-input::placeholder {
+  color: rgba(165, 180, 212, 0.62);
+}
+
+.mailroom-label {
+  display: block;
+  color: var(--muted) !important;
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.mailroom-button,
+.mailroom-button-secondary {
+  border-radius: 999px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.mailroom-button {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 12px 30px rgba(34, 211, 238, 0.18);
+}
+
+.mailroom-button-secondary {
+  color: var(--text);
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.mailroom-page iframe {
+  background: #ffffff;
+}
+
+.mailroom-page input[type="checkbox"] {
+  accent-color: #22d3ee;
+}
+
+/* === CLIENT MAILROOM DARK FIX END === */
