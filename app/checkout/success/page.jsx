@@ -50,7 +50,7 @@ export default async function CheckoutSuccessPage({ searchParams }) {
             marginBottom: "20px",
           }}
         >
-          ✓
+          âœ“
         </div>
 
         <h1

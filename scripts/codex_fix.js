@@ -13,7 +13,7 @@ async function main() {
       : "Fix syntax and parsing errors only. Preserve logic and intent. Return full corrected file.";
 
   if (!target) {
-    console.error('Usage: node scripts/codex_fix.js <file> [--instructions "…"]');
+    console.error('Usage: node scripts/codex_fix.js <file> [--instructions "â€¦"]');
     process.exitCode = 1;
     return;
   }

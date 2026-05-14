@@ -41,3 +41,4 @@ That keeps the site-side mesh light, but you will want a proper OAuth refresh fl
 - The route expects a ViralPack-style publish export JSON payload.
 - It supports local server asset paths, remote asset URLs, and caption-only text posts.
 - ZIP creation is handled locally in `lib/zip.js`, no extra dependency required.
+

@@ -15,3 +15,4 @@ Download the Projects CLI and run `stripe projects init` to get started. You get
 To install the Stripe CLI and Projects plugin, Homebrew users can run `brew install stripe/stripe-cli/stripe && stripe plugin install projects`. For other installation options, see https://docs.stripe.com/stripe-cli/install.md.
 
 After `stripe projects init`, prefer the local project skills it creates.
+

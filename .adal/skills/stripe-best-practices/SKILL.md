@@ -1,12 +1,12 @@
 ---
 name: stripe-best-practices
 description: >-
-  Guides Stripe integration decisions — API selection (Checkout Sessions vs
+  Guides Stripe integration decisions â€” API selection (Checkout Sessions vs
   PaymentIntents), Connect platform setup (Accounts v2, controller properties),
   billing/subscriptions, Treasury financial accounts, integration surfaces
   (Checkout, Payment Element), migrating from deprecated Stripe APIs, and
   security best practices (API key management, restricted keys, webhooks,
-  OAuth). Use when building, modifying, or reviewing any Stripe integration —
+  OAuth). Use when building, modifying, or reviewing any Stripe integration â€”
   including accepting payments, building marketplaces, integrating Stripe,
   processing payments, setting up subscriptions, creating connected accounts, or
   implementing secure key handling.
@@ -17,7 +17,7 @@ Latest Stripe API version: **2026-03-25.dahlia**. Always use the latest API vers
 
 ## Integration routing
 
-| Building…                                                                | Recommended API                     | Details                  |
+| Buildingâ€¦                                                                | Recommended API                     | Details                  |
 | ------------------------------------------------------------------------ | ----------------------------------- | ------------------------ |
 | One-time payments                                                        | Checkout Sessions                   | <references/payments.md> |
 | Custom payment form with embedded UI                                     | Checkout Sessions + Payment Element | <references/payments.md> |
@@ -31,8 +31,9 @@ Read the relevant reference file before answering any integration question or wr
 
 ## Key documentation
 
-When the user’s request does not clearly fit a single domain above, consult:
+When the userâ€™s request does not clearly fit a single domain above, consult:
 
-- [Integration Options](https://docs.stripe.com/payments/payment-methods/integration-options.md) — Start here when designing any integration.
-- [API Tour](https://docs.stripe.com/payments-api/tour.md) — Overview of Stripe’s API surface.
-- [Go Live Checklist](https://docs.stripe.com/get-started/checklist/go-live.md) — Review before launching.
+- [Integration Options](https://docs.stripe.com/payments/payment-methods/integration-options.md) â€” Start here when designing any integration.
+- [API Tour](https://docs.stripe.com/payments-api/tour.md) â€” Overview of Stripeâ€™s API surface.
+- [Go Live Checklist](https://docs.stripe.com/get-started/checklist/go-live.md) â€” Review before launching.
+

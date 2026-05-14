@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 export const runtime = "nodejs"; // important: keep this off edge for now
 
@@ -66,3 +66,4 @@ export async function POST(req) {
     );
   }
 }
+

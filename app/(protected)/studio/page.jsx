@@ -177,7 +177,7 @@ export default function StudioPage() {
   return (
     <main className="shell">
       <section className="hero">
-        <div className="kicker">Studio • build funnel assets</div>
+        <div className="kicker">Studio â€¢ build funnel assets</div>
         <h1>Generate the quiz fast, or run the full campaign.</h1>
         <p>
           Use quiz-only mode when you want to tune questions, result flow, and paywall without waiting on video generation.

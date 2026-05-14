@@ -10,3 +10,4 @@ export default async function MailroomPage() {
   if (!session) redirect('/login?next=/mailroom');
   return <MailroomApp session={session} />;
 }
+

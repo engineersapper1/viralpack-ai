@@ -45,3 +45,4 @@ export default function LoginForm({ next = '/mailroom' }) {
     </form>
   );
 }
+

@@ -10,7 +10,7 @@
 
 If the user has a recurring revenue model (subscriptions, usage-based billing, seat-based pricing), use the Billing APIs to [plan their integration](https://docs.stripe.com/billing/subscriptions/design-an-integration.md) instead of a direct PaymentIntent integration.
 
-Review the [Subscription Use Cases](https://docs.stripe.com/billing/subscriptions/use-cases.md) and [SaaS guide](https://docs.stripe.com/saas.md) to find the right pattern for the user’s pricing model.
+Review the [Subscription Use Cases](https://docs.stripe.com/billing/subscriptions/use-cases.md) and [SaaS guide](https://docs.stripe.com/saas.md) to find the right pattern for the userâ€™s pricing model.
 
 ## Recommended frontend pairing
 
@@ -20,5 +20,6 @@ For self-service subscription management (upgrades, downgrades, cancellation, pa
 
 ## Traps to avoid
 
-- Don’t build manual subscription renewal loops using raw PaymentIntents. Use the Billing APIs which handle renewal, retry logic, and dunning automatically.
-- Don’t use the deprecated `plan` object. Use [Prices](https://docs.stripe.com/api/prices.md) instead.
+- Donâ€™t build manual subscription renewal loops using raw PaymentIntents. Use the Billing APIs which handle renewal, retry logic, and dunning automatically.
+- Donâ€™t use the deprecated `plan` object. Use [Prices](https://docs.stripe.com/api/prices.md) instead.
+

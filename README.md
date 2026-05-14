@@ -144,7 +144,7 @@ The OpenAI prompt is intentionally strict:
 - no random emojis
 - short, human copy that feels like the client wrote it
 
-Manual mode uses the client’s own message as the source.
+Manual mode uses the clientâ€™s own message as the source.
 
 One-click mode uses:
 
@@ -206,3 +206,4 @@ supabase/migrations/001_mailroom.sql
 - Requires a verified Resend sending domain for official delivery
 
 The next clean upgrade would be a send queue plus campaign history dashboard with opens/clicks from Resend webhooks.
+

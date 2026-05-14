@@ -13,4 +13,5 @@ For Financial Accounts for platforms concepts and guides, see the [Financial Acc
 
 ## Legacy v1 Treasury
 
-Don’t use the [v1 Treasury Financial Accounts API](https://docs.stripe.com/api/treasury/financial_accounts.md) (`POST /v1/treasury/financial_accounts`) for new integrations. Existing v1 integrations continue to work.
+Donâ€™t use the [v1 Treasury Financial Accounts API](https://docs.stripe.com/api/treasury/financial_accounts.md) (`POST /v1/treasury/financial_accounts`) for new integrations. Existing v1 integrations continue to work.
+

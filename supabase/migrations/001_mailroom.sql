@@ -105,3 +105,4 @@ begin
       for select using (bucket_id = 'mailroom-public-assets');
   end if;
 end $$;
+

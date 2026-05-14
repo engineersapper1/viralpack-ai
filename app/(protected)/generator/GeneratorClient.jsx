@@ -86,7 +86,7 @@ export default function GeneratorClient() {
             <h2 className="h1">Generate one complete quiz pack.</h2>
             <p className="sub">
               ViralPack now creates quiz experiences, not business ads. Each run produces a self-contained folder with a
-              manifest, quiz data, tile image, and promo-video instructions. Drop that whole folder into OracleLoom’s
+              manifest, quiz data, tile image, and promo-video instructions. Drop that whole folder into OracleLoomâ€™s
               local <code>content/packs</code> intake folder, then push OracleLoom.
             </p>
 
@@ -136,7 +136,7 @@ Drop the whole <pack_slug> folder into:
 OracleLoom\\content\\packs\\`}
             </div>
             <p className="muted" style={{ marginTop: 12 }}>
-              Each pack becomes one tile. Tile click opens its quiz. Every quiz uses the same teaser → $1 full reading path.
+              Each pack becomes one tile. Tile click opens its quiz. Every quiz uses the same teaser â†’ $1 full reading path.
             </p>
           </section>
         </div>
@@ -179,3 +179,4 @@ function titleFromTheme(theme) {
   if (/^what/i.test(clean)) return clean;
   return `What ${clean.replace(/^your\s+/i, "")} Reveals About You`;
 }
+

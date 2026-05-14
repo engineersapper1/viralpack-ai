@@ -27,3 +27,4 @@ create table if not exists trend_packets (
   created_at timestamptz not null default now(),
   trend_json jsonb not null
 );
+

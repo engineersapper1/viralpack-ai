@@ -12,11 +12,11 @@ This guide covers upgrading Stripe API versions, server-side SDKs, Stripe.js, an
 
 ## Understanding Stripe API Versioning
 
-Stripe uses date-based API versions (e.g., `2026-03-25.dahlia`, `2025-08-27.basil`, `2024-12-18.acacia`). Your account’s API version determines request/response behavior.
+Stripe uses date-based API versions (e.g., `2026-03-25.dahlia`, `2025-08-27.basil`, `2024-12-18.acacia`). Your accountâ€™s API version determines request/response behavior.
 
 ### Types of Changes
 
-**Backward-Compatible Changes** (don’t require code updates):
+**Backward-Compatible Changes** (donâ€™t require code updates):
 
 - New API resources
 - New optional request parameters
@@ -68,11 +68,11 @@ stripe.Customer.create(
 
 ### Strongly-Typed Languages (Java, Go, .NET)
 
-These use a fixed API version matching the SDK release date. Don’t set a different API version for strongly-typed languages because response objects might not match the strong types in the SDK. Instead, update the SDK to target a new API version.
+These use a fixed API version matching the SDK release date. Donâ€™t set a different API version for strongly-typed languages because response objects might not match the strong types in the SDK. Instead, update the SDK to target a new API version.
 
 ### Best Practice
 
-Always specify the API version you’re integrating against in your code instead of relying on your account’s default API version:
+Always specify the API version youâ€™re integrating against in your code instead of relying on your accountâ€™s default API version:
 
 ```javascript
 // Good: Explicit version
@@ -113,7 +113,7 @@ Each Stripe.js version automatically pairs with its corresponding API version. F
 - Dahlia Stripe.js uses `2026-03-25.dahlia` API
 - Acacia Stripe.js uses `2024-12-18.acacia` API
 
-You can’t override this association.
+You canâ€™t override this association.
 
 ### Migrating from v3
 
@@ -183,3 +183,4 @@ const stripe = require('stripe')('sk_test_xxx', {
 - Test webhooks with the new version structure before upgrading
 - Breaking changes are tagged by affected product areas (Payments, Billing, Connect, etc.)
 - Multiple API versions coexist simultaneously, enabling staged adoption
+

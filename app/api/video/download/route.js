@@ -24,3 +24,4 @@ export async function GET(req) {
     return new Response(String(e?.message || e), { status: 500 });
   }
 }
+

@@ -12,11 +12,11 @@ const BROOKE_PROFILE = {
   sender_email: 'mailroom@viralpack.ai',
   reply_to_email: 'brooke@madeyoubrookellc.com',
   sending_domain: 'viralpack.ai',
-  address_line1: '10263 Gandy Blvd N #116',
+  address_line1: '',
   address_line2: '',
   city: 'St. Petersburg',
   state: 'FL',
-  postal_code: '33702',
+  postal_code: '',
   country: 'US'
 };
 
@@ -402,7 +402,7 @@ export default function MailroomApp({ session }) {
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="font-black">{item.subject || 'Untitled campaign'}</div>
-                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} · {item.recipient_count || 0} recipient(s)</div>
+                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} Â· {item.recipient_count || 0} recipient(s)</div>
                     </div>
                     <div className="text-sm font-bold text-black/60">{item.status || 'recorded'}</div>
                   </div>
@@ -454,3 +454,4 @@ function buildClientPreviewHtml(campaign, profile) {
   const paragraphs = Array.isArray(campaign.body_paragraphs) ? campaign.body_paragraphs : [];
   return `<!doctype html><html><body style="margin:0;background:${escapePreview(background)};font-family:Arial,Helvetica,sans-serif;padding:24px;"><div style="max-width:640px;margin:auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid rgba(0,0,0,.08);"><div style="padding:28px 28px 8px;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:${escapePreview(accent)};font-weight:700;">${escapePreview(profile.business_name || '')}</div><h1 style="margin:12px 0 14px;color:${escapePreview(primary)};font-size:30px;line-height:1.12;">${escapePreview(campaign.headline || campaign.selected_subject || '')}</h1></div>${images.map((url) => `<img src="${escapePreview(url)}" style="width:100%;display:block;max-width:600px;margin:0 auto 18px;border-radius:18px;" />`).join('')}<div style="padding:8px 28px 30px;">${paragraphs.map((p) => `<p style="margin:0 0 16px;color:#252525;font-size:16px;line-height:1.62;">${escapePreview(p)}</p>`).join('')}${campaign.cta_url ? `<div style="margin-top:24px;"><a href="${escapePreview(campaign.cta_url)}" style="display:inline-block;background:${escapePreview(primary)};color:#fff;text-decoration:none;border-radius:999px;padding:13px 20px;font-weight:700;">${escapePreview(campaign.cta_label || 'Book now')}</a></div>` : ''}</div></div><div style="max-width:640px;margin:18px auto 0;text-align:center;color:#777;font-size:12px;line-height:1.6;">${escapePreview(profile.address_line1 || '')}<br />${escapePreview([profile.city, profile.state, profile.postal_code].filter(Boolean).join(', '))}<br /><br /><u>Unsubscribe</u></div></body></html>`;
 }
+
