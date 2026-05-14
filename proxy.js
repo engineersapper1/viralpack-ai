@@ -1,10 +1,30 @@
 import { NextResponse } from "next/server";
 
+const MAILROOM_COOKIE = "vpack_mailroom_session";
+
 export function proxy(req) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith("/_next/")) return NextResponse.next();
   if (pathname === "/favicon.ico" || pathname === "/bg.jpg" || pathname === "/logo.png" || pathname.startsWith("/favicon-")) return NextResponse.next();
+
+  if (pathname === "/mailroom" || pathname.startsWith("/mailroom/")) {
+    const hasMailroomSession = req.cookies.get(MAILROOM_COOKIE)?.value;
+    if (!hasMailroomSession) {
+      const loginUrl = req.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set("next", "/mailroom");
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  if (pathname.startsWith("/api/mailroom/") && !pathname.startsWith("/api/mailroom/health")) {
+    const hasMailroomSession = req.cookies.get(MAILROOM_COOKIE)?.value;
+    if (!hasMailroomSession) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+  }
+
   if (pathname === "/" || pathname.startsWith("/generator") || pathname.startsWith("/studio")) return NextResponse.next();
 
   if (pathname.startsWith("/api/")) {

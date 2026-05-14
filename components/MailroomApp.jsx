@@ -1,43 +1,65 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 
-const emptyProfile = {
-  display_name: '',
-  business_name: '',
-  website_url: '',
-  sender_name: '',
-  sender_email: '',
-  reply_to_email: '',
-  sending_domain: '',
-  address_line1: '',
+const BROOKE_CTA_URL = 'https://www.madeyoubrookephoto.com/contact';
+
+const BROOKE_PROFILE = {
+  display_name: 'Made You Brooke',
+  business_name: 'Made You Brooke',
+  website_url: 'https://www.madeyoubrookephoto.com/',
+  sender_name: 'Made You Brooke',
+  sender_email: 'mailroom@viralpack.ai',
+  reply_to_email: 'brooke@madeyoubrookellc.com',
+  sending_domain: 'viralpack.ai',
+  address_line1: '10263 Gandy Blvd N #116',
   address_line2: '',
-  city: '',
-  state: '',
-  postal_code: '',
+  city: 'St. Petersburg',
+  state: 'FL',
+  postal_code: '33702',
   country: 'US'
 };
 
+const emptyProfile = { ...BROOKE_PROFILE };
+
+const initialCampaignForm = {
+  mode: 'manual',
+  theme: '',
+  manualMessage: '',
+  offer: '',
+  ctaUrl: BROOKE_CTA_URL
+};
+
+function normalizeBrookeProfile(raw = {}) {
+  return {
+    ...emptyProfile,
+    ...raw,
+    display_name: BROOKE_PROFILE.display_name,
+    business_name: BROOKE_PROFILE.business_name,
+    website_url: BROOKE_PROFILE.website_url,
+    sender_name: BROOKE_PROFILE.sender_name,
+    sender_email: BROOKE_PROFILE.sender_email,
+    reply_to_email: BROOKE_PROFILE.reply_to_email,
+    sending_domain: BROOKE_PROFILE.sending_domain,
+    country: raw.country || BROOKE_PROFILE.country
+  };
+}
+
 export default function MailroomApp({ session }) {
-  const [tab, setTab] = useState('profile');
+  const [tab, setTab] = useState('contacts');
   const [profile, setProfile] = useState(emptyProfile);
   const [lists, setLists] = useState([]);
+  const [campaignHistory, setCampaignHistory] = useState([]);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [listName, setListName] = useState('');
+  const [listName, setListName] = useState('MYB contact list');
   const [sheetUrl, setSheetUrl] = useState('');
   const [contactFile, setContactFile] = useState(null);
   const [uploadSummary, setUploadSummary] = useState(null);
   const [assetFiles, setAssetFiles] = useState([]);
   const [assetUrls, setAssetUrls] = useState([]);
-  const [campaignForm, setCampaignForm] = useState({
-    mode: 'manual',
-    theme: '',
-    manualMessage: '',
-    offer: '',
-    ctaUrl: ''
-  });
+  const [campaignForm, setCampaignForm] = useState(initialCampaignForm);
   const [campaign, setCampaign] = useState(null);
   const [testEmail, setTestEmail] = useState('');
   const [selectedListId, setSelectedListId] = useState('');
@@ -60,12 +82,14 @@ export default function MailroomApp({ session }) {
   async function refresh() {
     setError('');
     try {
-      const [profileData, listData] = await Promise.all([
+      const [profileData, listData, campaignData] = await Promise.all([
         api('/api/mailroom/profile'),
-        api('/api/mailroom/lists')
+        api('/api/mailroom/lists'),
+        api('/api/mailroom/campaigns')
       ]);
-      setProfile({ ...emptyProfile, ...(profileData.profile || {}) });
+      setProfile(normalizeBrookeProfile(profileData.profile || {}));
       setLists(listData.lists || []);
+      setCampaignHistory(campaignData.campaigns || []);
       if (!selectedListId && listData.lists?.[0]?.id) setSelectedListId(listData.lists[0].id);
     } catch (err) {
       setError(err.message);
@@ -75,10 +99,6 @@ export default function MailroomApp({ session }) {
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login?next=/mailroom';
-  }
-
-  function updateProfile(key, value) {
-    setProfile((current) => ({ ...current, [key]: value }));
   }
 
   function updateCampaign(key, value) {
@@ -98,25 +118,6 @@ export default function MailroomApp({ session }) {
     });
   }
 
-  async function saveProfile() {
-    setBusy(true);
-    setError('');
-    setStatus('');
-    try {
-      const data = await api('/api/mailroom/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profile)
-      });
-      setProfile({ ...emptyProfile, ...(data.profile || {}) });
-      setStatus('Profile saved.');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function uploadContacts() {
     setBusy(true);
     setError('');
@@ -124,13 +125,13 @@ export default function MailroomApp({ session }) {
     setUploadSummary(null);
     try {
       const form = new FormData();
-      form.append('listName', listName);
+      form.append('listName', listName || 'MYB contact list');
       form.append('sheetUrl', sheetUrl);
       if (contactFile) form.append('file', contactFile);
       const data = await api('/api/mailroom/contacts/upload', { method: 'POST', body: form });
       setUploadSummary(data);
-      setStatus(`Imported ${data.contactsImported} contacts.`);
-      setListName('');
+      setStatus(`Imported ${data.contactsImported} contact(s).`);
+      setListName('MYB contact list');
       setSheetUrl('');
       setContactFile(null);
       await refresh();
@@ -167,7 +168,7 @@ export default function MailroomApp({ session }) {
       const data = await api('/api/mailroom/campaigns/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...campaignForm, assetUrls })
+        body: JSON.stringify({ ...campaignForm, ctaUrl: BROOKE_CTA_URL, assetUrls })
       });
       setCampaign(data.campaign);
       setStatus('Campaign generated. Review it before sending.');
@@ -211,6 +212,7 @@ export default function MailroomApp({ session }) {
       });
       setStatus(`Campaign sent to ${data.recipients} recipient(s).`);
       setGates({ consent: false, reviewed: false, officialSender: false });
+      await refresh();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -219,29 +221,29 @@ export default function MailroomApp({ session }) {
   }
 
   const tabs = [
-    ['profile', 'Profile'],
-    ['contacts', 'Contacts'],
-    ['campaign', 'Campaign'],
-    ['send', 'Preview & Send']
+    ['contacts', '1. Contacts'],
+    ['campaign', '2. Campaign'],
+    ['send', '3. Preview & Send'],
+    ['history', 'History']
   ];
 
   return (
-    <main className="mailroom-page">
-      <section className="container">
-        <header className="card mailroom-hero">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff6d6,transparent_34%),linear-gradient(135deg,#f8f6f0,#ece7dc)] px-5 py-8">
+      <section className="mx-auto max-w-7xl">
+        <header className="mailroom-card p-6 md:p-8">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.35em] text-black/45">ViralPack beta room</p>
-              <h1 className="mt-3 text-4xl font-black md:text-6xl">Client Mailroom</h1>
+              <p className="text-sm font-bold uppercase tracking-[0.35em] text-black/45">Private campaign room</p>
+              <h1 className="mt-3 text-4xl font-black md:text-6xl">Made You Brooke Mailroom</h1>
               <p className="mt-3 max-w-3xl leading-7 text-black/65">
-                Logged in as {session.displayName || session.username}. Build concise, native-sounding client emails, test them, and send only after the consent gate is checked.
+                Upload contacts, describe the campaign, review the email, send yourself a test, then send to the selected list. The booking link and sender setup are already handled.
               </p>
             </div>
             <button className="mailroom-button-secondary" onClick={logout}>Log out</button>
           </div>
         </header>
 
-        <div className="row mailroom-tabs">
+        <div className="mt-5 flex flex-wrap gap-2">
           {tabs.map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} className={tab === id ? 'mailroom-button' : 'mailroom-button-secondary'}>{label}</button>
           ))}
@@ -254,41 +256,24 @@ export default function MailroomApp({ session }) {
           </div>
         )}
 
-        {tab === 'profile' && (
-          <section className="mailroom-card mt-6 p-6 md:p-8">
-            <h2 className="text-3xl font-black">Business profile</h2>
-            <p className="mt-2 text-black/65">This information is cached for the beta user and used for official sending, footer compliance, and brand voice.</p>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Field label="Display name" value={profile.display_name} onChange={(v) => updateProfile('display_name', v)} />
-              <Field label="Business name" value={profile.business_name} onChange={(v) => updateProfile('business_name', v)} />
-              <Field label="Website URL" value={profile.website_url} onChange={(v) => updateProfile('website_url', v)} />
-              <Field label="Sending domain" placeholder="example.com" value={profile.sending_domain} onChange={(v) => updateProfile('sending_domain', v)} />
-              <Field label="Sender name" value={profile.sender_name} onChange={(v) => updateProfile('sender_name', v)} />
-              <Field label="Sender email" value={profile.sender_email} onChange={(v) => updateProfile('sender_email', v)} />
-              <Field label="Reply-to email" value={profile.reply_to_email} onChange={(v) => updateProfile('reply_to_email', v)} />
-              <Field label="Mailing address line 1" value={profile.address_line1} onChange={(v) => updateProfile('address_line1', v)} />
-              <Field label="Mailing address line 2" value={profile.address_line2} onChange={(v) => updateProfile('address_line2', v)} />
-              <Field label="City" value={profile.city} onChange={(v) => updateProfile('city', v)} />
-              <Field label="State" value={profile.state} onChange={(v) => updateProfile('state', v)} />
-              <Field label="Postal code" value={profile.postal_code} onChange={(v) => updateProfile('postal_code', v)} />
-              <Field label="Country" value={profile.country} onChange={(v) => updateProfile('country', v)} />
-            </div>
-            <button className="mailroom-button mt-6" onClick={saveProfile} disabled={busy}>{busy ? 'Saving...' : 'Save profile'}</button>
-          </section>
-        )}
-
         {tab === 'contacts' && (
           <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="mailroom-card mt-6 p-6 md:p-8">
-              <h2 className="text-3xl font-black">Upload contact sheet</h2>
-              <p className="mt-2 leading-7 text-black/65">Supports CSV, XLSX, XLS, and Google Sheets shared/published links that can export as CSV.</p>
+              <h2 className="text-3xl font-black">Upload contacts</h2>
+              <p className="mt-2 leading-7 text-black/65">Upload a CSV or Excel contact sheet. Required column: email. Optional columns: first_name, last_name, full_name, tags.</p>
               <div className="mt-6 grid gap-4">
-                <Field label="List name" value={listName} onChange={setListName} placeholder="Memorial Day reminders" />
+                <Field label="List name" value={listName} onChange={setListName} placeholder="Spring mini-session list" />
                 <label className="grid gap-2">
-                  <span className="mailroom-label">CSV/XLSX file</span>
+                  <span className="mailroom-label">Contact file</span>
                   <input className="mailroom-input" type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setContactFile(e.target.files?.[0] || null)} />
+                  <span className="text-sm text-black/55">CSV, XLSX, or XLS. Best columns: email, first_name, last_name.</span>
                 </label>
-                <Field label="Or Google Sheets / CSV URL" value={sheetUrl} onChange={setSheetUrl} placeholder="https://docs.google.com/spreadsheets/d/..." />
+                <details className="rounded-3xl border border-black/10 bg-white/60 p-4">
+                  <summary className="cursor-pointer font-bold">Optional: use a shared Google Sheet instead</summary>
+                  <div className="mt-4">
+                    <Field label="Shared Google Sheets / CSV URL" value={sheetUrl} onChange={setSheetUrl} placeholder="https://docs.google.com/spreadsheets/d/..." />
+                  </div>
+                </details>
                 <button className="mailroom-button" onClick={uploadContacts} disabled={busy}>{busy ? 'Uploading...' : 'Import contacts'}</button>
               </div>
               {uploadSummary && (
@@ -301,15 +286,15 @@ export default function MailroomApp({ session }) {
               )}
             </div>
             <div className="mailroom-card mt-6 p-6 md:p-8">
-              <h2 className="text-3xl font-black">Lists</h2>
+              <h2 className="text-3xl font-black">Uploaded lists</h2>
               <div className="mt-5 grid gap-3">
-                {lists.length === 0 && <p className="text-black/60">No lists yet.</p>}
+                {lists.length === 0 && <p className="text-black/60">No lists yet. Upload the first contact sheet on the left.</p>}
                 {lists.map((list) => (
-                  <div key={list.id} className="rounded-2xl border border-black/10 p-4">
+                  <button key={list.id} type="button" onClick={() => setSelectedListId(list.id)} className={`rounded-2xl border p-4 text-left ${selectedListId === list.id ? 'border-black bg-white' : 'border-black/10 bg-white/60'}`}>
                     <div className="font-black">{list.name}</div>
                     <div className="mt-1 text-sm text-black/60">{list.valid_contacts} valid, {list.rejected_contacts} rejected</div>
                     <div className="mt-1 text-xs text-black/45">{new Date(list.created_at).toLocaleString()}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -319,29 +304,22 @@ export default function MailroomApp({ session }) {
         {tab === 'campaign' && (
           <section className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="mailroom-card mt-6 p-6 md:p-8">
-              <h2 className="text-3xl font-black">Build campaign</h2>
-              <p className="mt-2 leading-7 text-black/65">The generator is instructed to keep the clientâ€™s voice short, useful, and native. No bot confetti.</p>
+              <h2 className="text-3xl font-black">Campaign details</h2>
+              <p className="mt-2 leading-7 text-black/65">Write the rough idea. Mailroom will turn it into a short, natural Made You Brooke email.</p>
               <div className="mt-6 grid gap-4">
+                <Field label="Campaign topic" value={campaignForm.theme} onChange={(v) => updateCampaign('theme', v)} placeholder="Fall family photo sessions" />
+                <Field label="Offer or important detail, optional" value={campaignForm.offer} onChange={(v) => updateCampaign('offer', v)} placeholder="Limited weekend spots, booking closes Friday" />
                 <label className="grid gap-2">
-                  <span className="mailroom-label">Mode</span>
-                  <select className="mailroom-input" value={campaignForm.mode} onChange={(e) => updateCampaign('mode', e.target.value)}>
-                    <option value="manual">Manual message, AI layout</option>
-                    <option value="one_click">One-click from website and theme</option>
-                  </select>
+                  <span className="mailroom-label">What should the email say?</span>
+                  <textarea className="mailroom-input min-h-[210px]" value={campaignForm.manualMessage} onChange={(e) => updateCampaign('manualMessage', e.target.value)} placeholder="Write the rough message here. Dates, session type, mood, who it is for, and anything Brooke wants people to know." />
                 </label>
-                <Field label="Theme" value={campaignForm.theme} onChange={(v) => updateCampaign('theme', v)} placeholder="Memorial Day photo reminders" />
-                <Field label="Booking / CTA URL" value={campaignForm.ctaUrl} onChange={(v) => updateCampaign('ctaUrl', v)} placeholder="https://.../book" />
-                <Field label="Offer or important detail, optional" value={campaignForm.offer} onChange={(v) => updateCampaign('offer', v)} placeholder="Mini sessions available May 24-27" />
-                <label className="grid gap-2">
-                  <span className="mailroom-label">Manual message</span>
-                  <textarea className="mailroom-input min-h-[170px]" value={campaignForm.manualMessage} onChange={(e) => updateCampaign('manualMessage', e.target.value)} placeholder="Write what the client wants to say. Keep it rough. The generator will clean it up without making it sound fake." />
-                </label>
+                <input type="hidden" value={BROOKE_CTA_URL} readOnly />
               </div>
             </div>
 
             <div className="mailroom-card mt-6 p-6 md:p-8">
-              <h2 className="text-3xl font-black">Images</h2>
-              <p className="mt-2 leading-7 text-black/65">Optional campaign photos. Email images need public URLs, so these are uploaded to the Supabase public mailroom bucket.</p>
+              <h2 className="text-3xl font-black">Photos for the campaign</h2>
+              <p className="mt-2 leading-7 text-black/65">Optional. Add a few photos for the email, then generate the campaign. The button link is already set to the Made You Brooke contact page.</p>
               <div className="mt-5 grid gap-4">
                 <input className="mailroom-input" type="file" accept="image/*" multiple onChange={(e) => setAssetFiles(Array.from(e.target.files || []))} />
                 <button className="mailroom-button-secondary" onClick={uploadAssets} disabled={busy || !assetFiles.length}>Upload selected images</button>
@@ -365,7 +343,7 @@ export default function MailroomApp({ session }) {
                 <div className="mt-5 grid gap-4">
                   <div className="rounded-2xl bg-black/5 p-4">
                     <p className="text-sm font-bold text-black/50">Final edit pass</p>
-                    <p className="mt-1 text-sm text-black/60">Clean up the generated email before sending. This keeps the human hand on the wheel.</p>
+                    <p className="mt-1 text-sm text-black/60">Edit anything that feels off before sending.</p>
                   </div>
                   <Field label="Subject" value={campaign.selected_subject || ''} onChange={(v) => updateGeneratedCampaign('selected_subject', v)} />
                   <Field label="Preview text" value={campaign.preview_text || ''} onChange={(v) => updateGeneratedCampaign('preview_text', v)} />
@@ -390,10 +368,10 @@ export default function MailroomApp({ session }) {
                   </label>
 
                   <div className="rounded-3xl border border-black/10 bg-white p-4">
-                    <h3 className="font-black">Required send gate</h3>
-                    <Gate checked={gates.consent} onChange={(v) => setGates((g) => ({ ...g, consent: v }))} label="I confirm this contact list contains customers, subscribers, or people who gave permission to receive emails from this business." />
-                    <Gate checked={gates.reviewed} onChange={(v) => setGates((g) => ({ ...g, reviewed: v }))} label="I reviewed the subject, message, links, offer, dates, and business information." />
-                    <Gate checked={gates.officialSender} onChange={(v) => setGates((g) => ({ ...g, officialSender: v }))} label="I confirm this should be sent from the official client business email/domain." />
+                    <h3 className="font-black">Ready to send?</h3>
+                    <Gate checked={gates.consent} onChange={(v) => setGates((g) => ({ ...g, consent: v }))} label="This contact list contains customers, subscribers, or people who gave permission to receive emails from Made You Brooke." />
+                    <Gate checked={gates.reviewed} onChange={(v) => setGates((g) => ({ ...g, reviewed: v }))} label="I reviewed the subject, message, links, dates, and details." />
+                    <Gate checked={gates.officialSender} onChange={(v) => setGates((g) => ({ ...g, officialSender: v }))} label="I approve sending this Made You Brooke campaign now." />
                   </div>
 
                   <button className="mailroom-button" onClick={sendCampaign} disabled={busy || !campaign || !selectedListId || !gates.consent || !gates.reviewed || !gates.officialSender}>
@@ -412,6 +390,29 @@ export default function MailroomApp({ session }) {
             </div>
           </section>
         )}
+
+        {tab === 'history' && (
+          <section className="mailroom-card mt-6 p-6 md:p-8">
+            <h2 className="text-3xl font-black">Campaign history</h2>
+            <p className="mt-2 leading-7 text-black/65">Recent final sends are recorded here.</p>
+            <div className="mt-6 grid gap-3">
+              {campaignHistory.length === 0 && <p className="text-black/60">No campaign sends recorded yet.</p>}
+              {campaignHistory.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-black/10 bg-white p-4">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="font-black">{item.subject || 'Untitled campaign'}</div>
+                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} · {item.recipient_count || 0} recipient(s)</div>
+                    </div>
+                    <div className="text-sm font-bold text-black/60">{item.status || 'recorded'}</div>
+                  </div>
+                  <div className="mt-2 text-xs text-black/45">{new Date(item.sent_at || item.created_at).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
       </section>
     </main>
   );
@@ -435,7 +436,6 @@ function Gate({ checked, onChange, label }) {
   );
 }
 
-
 function escapePreview(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -454,6 +454,3 @@ function buildClientPreviewHtml(campaign, profile) {
   const paragraphs = Array.isArray(campaign.body_paragraphs) ? campaign.body_paragraphs : [];
   return `<!doctype html><html><body style="margin:0;background:${escapePreview(background)};font-family:Arial,Helvetica,sans-serif;padding:24px;"><div style="max-width:640px;margin:auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid rgba(0,0,0,.08);"><div style="padding:28px 28px 8px;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:${escapePreview(accent)};font-weight:700;">${escapePreview(profile.business_name || '')}</div><h1 style="margin:12px 0 14px;color:${escapePreview(primary)};font-size:30px;line-height:1.12;">${escapePreview(campaign.headline || campaign.selected_subject || '')}</h1></div>${images.map((url) => `<img src="${escapePreview(url)}" style="width:100%;display:block;max-width:600px;margin:0 auto 18px;border-radius:18px;" />`).join('')}<div style="padding:8px 28px 30px;">${paragraphs.map((p) => `<p style="margin:0 0 16px;color:#252525;font-size:16px;line-height:1.62;">${escapePreview(p)}</p>`).join('')}${campaign.cta_url ? `<div style="margin-top:24px;"><a href="${escapePreview(campaign.cta_url)}" style="display:inline-block;background:${escapePreview(primary)};color:#fff;text-decoration:none;border-radius:999px;padding:13px 20px;font-weight:700;">${escapePreview(campaign.cta_label || 'Book now')}</a></div>` : ''}</div></div><div style="max-width:640px;margin:18px auto 0;text-align:center;color:#777;font-size:12px;line-height:1.6;">${escapePreview(profile.address_line1 || '')}<br />${escapePreview([profile.city, profile.state, profile.postal_code].filter(Boolean).join(', '))}<br /><br /><u>Unsubscribe</u></div></body></html>`;
 }
-
-
-
