@@ -18,17 +18,18 @@ export async function POST(request) {
 
     const profile = await getOrCreateProfile(session);
     const missing = profileHasRequiredSendFields(profile);
-    if (missing.length) return NextResponse.json({ error: `Complete profile before sending: ${missing.join(', ')}.` }, { status: 400 });
+    if (missing.length) return NextResponse.json({ error: `Missing required sender setup: ${missing.join(', ')}.` }, { status: 400 });
 
     const campaign = body.campaign || {};
-    const html = renderCampaignHtml({ campaign, profile, contact: { first_name: 'Test', full_name: 'Test Contact', email: testEmail } });
-    const text = renderPlainText({ campaign, profile, contact: { first_name: 'Test', full_name: 'Test Contact', email: testEmail } });
+    const contact = { first_name: 'Test', full_name: 'Test Contact', email: testEmail };
+    const html = renderCampaignHtml({ campaign, profile, contact });
+    const text = renderPlainText({ campaign, profile, contact });
     const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: formatSender(profile),
       to: [testEmail],
       replyTo: profile.reply_to_email,
-      subject: `[TEST] ${campaign.selected_subject || campaign.subject || 'Client Mailroom preview'}`,
+      subject: `[TEST] ${campaign.selected_subject || campaign.subject || 'Made You Brooke preview'}`,
       html,
       text
     });
@@ -36,7 +37,6 @@ export async function POST(request) {
     if (error) return NextResponse.json({ error: error.message || 'Resend rejected the test email.' }, { status: 502 });
     return NextResponse.json({ ok: true, data });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Test send failed.' }, { status: 500 });
   }
 }
-

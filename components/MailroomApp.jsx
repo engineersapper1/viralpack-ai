@@ -9,13 +9,13 @@ const BROOKE_PROFILE = {
   business_name: 'Made You Brooke',
   website_url: 'https://www.madeyoubrookephoto.com/',
   sender_name: 'Made You Brooke',
-  sender_email: 'mailroom@viralpack.ai',
-  reply_to_email: 'brooke@madeyoubrookellc.com',
-  sending_domain: 'viralpack.ai',
+  sender_email: 'hello@madeyoubrookephoto.com',
+  reply_to_email: 'hello@madeyoubrookephoto.com',
+  sending_domain: 'madeyoubrookephoto.com',
   address_line1: '',
   address_line2: '',
-  city: 'St. Petersburg',
-  state: 'FL',
+  city: '',
+  state: '',
   postal_code: '',
   country: 'US'
 };
@@ -130,7 +130,7 @@ export default function MailroomApp({ session }) {
       if (contactFile) form.append('file', contactFile);
       const data = await api('/api/mailroom/contacts/upload', { method: 'POST', body: form });
       setUploadSummary(data);
-      setStatus(`Imported ${data.contactsImported} contact(s).`);
+      setStatus(`Imported ${data.contactsImported} contact(s). Master list updated.`);
       setListName('MYB contact list');
       setSheetUrl('');
       setContactFile(null);
@@ -260,13 +260,13 @@ export default function MailroomApp({ session }) {
           <section className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="mailroom-card mt-6 p-6 md:p-8">
               <h2 className="text-3xl font-black">Upload contacts</h2>
-              <p className="mt-2 leading-7 text-black/65">Upload a CSV or Excel contact sheet. Required column: email. Optional columns: first_name, last_name, full_name, tags.</p>
+              <p className="mt-2 leading-7 text-black/65">Upload a CSV or Excel contact sheet. Required columns: first name, last name, email. Headers are not case sensitive.</p>
               <div className="mt-6 grid gap-4">
                 <Field label="List name" value={listName} onChange={setListName} placeholder="Spring mini-session list" />
                 <label className="grid gap-2">
                   <span className="mailroom-label">Contact file</span>
                   <input className="mailroom-input" type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setContactFile(e.target.files?.[0] || null)} />
-                  <span className="text-sm text-black/55">CSV, XLSX, or XLS. Best columns: email, first_name, last_name.</span>
+                  <span className="text-sm text-black/55">CSV, XLSX, or XLS. Best columns: first name, last name, email. Data starts on row 2.</span>
                 </label>
                 <details className="rounded-3xl border border-black/10 bg-white/60 p-4">
                   <summary className="cursor-pointer font-bold">Optional: use a shared Google Sheet instead</summary>
@@ -281,6 +281,7 @@ export default function MailroomApp({ session }) {
                   <p><strong>Rows:</strong> {uploadSummary.summary?.totalRows}</p>
                   <p><strong>Imported:</strong> {uploadSummary.contactsImported}</p>
                   <p><strong>Rejected:</strong> {uploadSummary.summary?.rejected}</p>
+                  <p><strong>Format:</strong> first name, last name, email</p>
                   <p><strong>Email column:</strong> {uploadSummary.columns?.email || 'detected'}</p>
                 </div>
               )}
@@ -289,6 +290,12 @@ export default function MailroomApp({ session }) {
               <h2 className="text-3xl font-black">Uploaded lists</h2>
               <div className="mt-5 grid gap-3">
                 {lists.length === 0 && <p className="text-black/60">No lists yet. Upload the first contact sheet on the left.</p>}
+                {lists.length > 0 && (
+                  <button type="button" onClick={() => setSelectedListId('master')} className={`rounded-2xl border p-4 text-left ${selectedListId === 'master' ? 'border-black bg-white' : 'border-black/10 bg-white/60'}`}>
+                    <div className="font-black">Master contact list</div>
+                    <div className="mt-1 text-sm text-black/60">All uploaded contacts, minus unsubscribes</div>
+                  </button>
+                )}
                 {lists.map((list) => (
                   <button key={list.id} type="button" onClick={() => setSelectedListId(list.id)} className={`rounded-2xl border p-4 text-left ${selectedListId === list.id ? 'border-black bg-white' : 'border-black/10 bg-white/60'}`}>
                     <div className="font-black">{list.name}</div>
@@ -363,6 +370,7 @@ export default function MailroomApp({ session }) {
                     <span className="mailroom-label">Contact list</span>
                     <select className="mailroom-input" value={selectedListId} onChange={(e) => setSelectedListId(e.target.value)}>
                       <option value="">Choose list</option>
+                      {lists.length > 0 && <option value="master">Master contact list</option>}
                       {lists.map((list) => <option key={list.id} value={list.id}>{list.name} ({list.valid_contacts})</option>)}
                     </select>
                   </label>
@@ -402,7 +410,7 @@ export default function MailroomApp({ session }) {
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="font-black">{item.subject || 'Untitled campaign'}</div>
-                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} Â· {item.recipient_count || 0} recipient(s)</div>
+                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} · {item.recipient_count || 0} recipient(s)</div>
                     </div>
                     <div className="text-sm font-bold text-black/60">{item.status || 'recorded'}</div>
                   </div>
@@ -454,4 +462,3 @@ function buildClientPreviewHtml(campaign, profile) {
   const paragraphs = Array.isArray(campaign.body_paragraphs) ? campaign.body_paragraphs : [];
   return `<!doctype html><html><body style="margin:0;background:${escapePreview(background)};font-family:Arial,Helvetica,sans-serif;padding:24px;"><div style="max-width:640px;margin:auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid rgba(0,0,0,.08);"><div style="padding:28px 28px 8px;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:${escapePreview(accent)};font-weight:700;">${escapePreview(profile.business_name || '')}</div><h1 style="margin:12px 0 14px;color:${escapePreview(primary)};font-size:30px;line-height:1.12;">${escapePreview(campaign.headline || campaign.selected_subject || '')}</h1></div>${images.map((url) => `<img src="${escapePreview(url)}" style="width:100%;display:block;max-width:600px;margin:0 auto 18px;border-radius:18px;" />`).join('')}<div style="padding:8px 28px 30px;">${paragraphs.map((p) => `<p style="margin:0 0 16px;color:#252525;font-size:16px;line-height:1.62;">${escapePreview(p)}</p>`).join('')}${campaign.cta_url ? `<div style="margin-top:24px;"><a href="${escapePreview(campaign.cta_url)}" style="display:inline-block;background:${escapePreview(primary)};color:#fff;text-decoration:none;border-radius:999px;padding:13px 20px;font-weight:700;">${escapePreview(campaign.cta_label || 'Book now')}</a></div>` : ''}</div></div><div style="max-width:640px;margin:18px auto 0;text-align:center;color:#777;font-size:12px;line-height:1.6;">${escapePreview(profile.address_line1 || '')}<br />${escapePreview([profile.city, profile.state, profile.postal_code].filter(Boolean).join(', '))}<br /><br /><u>Unsubscribe</u></div></body></html>`;
 }
-

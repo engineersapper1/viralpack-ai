@@ -21,7 +21,7 @@ export async function POST(request) {
 
     const profile = await getOrCreateProfile(session);
     const missing = profileHasRequiredSendFields(profile);
-    if (missing.length) return NextResponse.json({ error: `Complete profile before sending: ${missing.join(', ')}.` }, { status: 400 });
+    if (missing.length) return NextResponse.json({ error: `Missing required sender setup: ${missing.join(', ')}.` }, { status: 400 });
 
     const domain = senderDomain(profile.sender_email);
     if (profile.sending_domain && domain && profile.sending_domain !== domain) {
@@ -34,7 +34,7 @@ export async function POST(request) {
     const recipients = await getRecipientsForList(profile.id, listId);
     if (!recipients.length) return NextResponse.json({ error: 'No sendable recipients found. They may all be unsubscribed or invalid.' }, { status: 400 });
     if (recipients.length > MAX_RECIPIENTS_PER_SEND) {
-      return NextResponse.json({ error: `This beta send is capped at ${MAX_RECIPIENTS_PER_SEND} recipients. Split the list or raise MAILROOM_MAX_RECIPIENTS_PER_SEND intentionally.` }, { status: 400 });
+      return NextResponse.json({ error: `This beta send is capped at ${MAX_RECIPIENTS_PER_SEND} recipients.` }, { status: 400 });
     }
 
     const campaign = body.campaign || {};
@@ -46,7 +46,7 @@ export async function POST(request) {
         from: formatSender(profile),
         to: [contact.email],
         replyTo: profile.reply_to_email,
-        subject: campaign.selected_subject || campaign.subject || 'Update',
+        subject: campaign.selected_subject || campaign.subject || 'A note from Made You Brooke',
         html: renderCampaignHtml({ campaign, profile, contact, unsubscribeUrl }),
         text: renderPlainText({ campaign, profile, contact, unsubscribeUrl }),
         headers: {
@@ -66,7 +66,6 @@ export async function POST(request) {
     const saved = await saveCampaignSend({ profileId: profile.id, listId, campaign: campaignForRecord, status: 'sent', recipientCount: recipients.length, resendResponse: data });
     return NextResponse.json({ ok: true, recipients: recipients.length, data, campaignRecord: saved });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Campaign send failed.' }, { status: 500 });
   }
 }
-
