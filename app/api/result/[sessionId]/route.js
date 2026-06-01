@@ -1,4 +1,4 @@
-import { getSession } from "@/lib/quiz_store";
+import { getSession, saveSession } from "@/lib/quiz_store";
 
 function json(data, init = {}) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -10,26 +10,38 @@ function json(data, init = {}) {
   });
 }
 
-export async function GET(_req, { params }) {
+export async function POST(req) {
   try {
-    const { sessionId } = await params;
+    const body = await req.json().catch(() => ({}));
+    const sessionId = String(body?.session_id || "").trim();
+
+    if (!sessionId) {
+      return json({ ok: false, error: "Missing session_id" }, { status: 400 });
+    }
+
     const session = await getSession(sessionId);
 
     if (!session) {
       return json({ ok: false, error: "Session not found" }, { status: 404 });
     }
 
+    const updated = await saveSession({
+      ...session,
+      unlocked: true,
+      unlocked_at: new Date().toISOString(),
+    });
+
     return json({
       ok: true,
-      session_id: session.session_id,
-      unlocked: Boolean(session.unlocked),
-      unlocked_at: session.unlocked_at || null,
-      stripe_payment_status: session.stripe_payment_status || null,
-      result_url: `/result/${session.session_id}`,
-      preview: session.preview || {},
-      premium: session.unlocked ? session.premium || {} : null,
+      result_url: `/result/${updated.session_id}`,
     });
   } catch (error) {
-    return json({ ok: false, error: error?.message || "Failed to load result" }, { status: 500 });
+    return json(
+      {
+        ok: false,
+        error: error?.message || "Premium unlock failed",
+      },
+      { status: 500 }
+    );
   }
 }

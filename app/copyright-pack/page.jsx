@@ -175,7 +175,7 @@ remote = ${result.cloud?.remote_path || ""}`}
 
       <footer className="footer">
         <div className="footerRow">
-          <div>Â© {year} ViralPack.ai</div>
+          <div>Ãƒâ€šÃ‚Â© {year} ViralPack.ai</div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             <a href="/">Home</a>
             <a href="/studio">Studio</a>

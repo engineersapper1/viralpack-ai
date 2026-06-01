@@ -410,7 +410,7 @@ export default function MailroomApp({ session }) {
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="font-black">{item.subject || 'Untitled campaign'}</div>
-                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} Â· {item.recipient_count || 0} recipient(s)</div>
+                      <div className="mt-1 text-sm text-black/60">{item.theme || item.mode || 'Campaign'} Ãƒâ€šÃ‚Â· {item.recipient_count || 0} recipient(s)</div>
                     </div>
                     <div className="text-sm font-bold text-black/60">{item.status || 'recorded'}</div>
                   </div>

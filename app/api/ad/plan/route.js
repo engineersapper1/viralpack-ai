@@ -117,14 +117,14 @@ function makeStyleLock(inputs) {
 }
 
 function endRuleForSeconds(seconds) {
-  if (seconds === 12) return "Finish by 10.5s, then HOLD 10.5â€“12.0s (no new motion).";
-  if (seconds === 8) return "Finish by 6.8s, then HOLD 6.8â€“8.0s (no new motion).";
-  if (seconds === 4) return "Finish by 3.2s, then HOLD 3.2â€“4.0s (no new motion).";
+  if (seconds === 12) return "Finish by 10.5s, then HOLD 10.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“12.0s (no new motion).";
+  if (seconds === 8) return "Finish by 6.8s, then HOLD 6.8ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“8.0s (no new motion).";
+  if (seconds === 4) return "Finish by 3.2s, then HOLD 3.2ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4.0s (no new motion).";
   return "Finish early, then hold to the end.";
 }
 
 function timelineForSeconds(seconds) {
-  if (seconds === 4) return "Timeline: 0.0â€“0.5 hold, 0.5â€“3.5 speak/action, 3.5â€“4.0 hold stitch frame.";
+  if (seconds === 4) return "Timeline: 0.0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“0.5 hold, 0.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3.5 speak/action, 3.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4.0 hold stitch frame.";
   if (seconds === 8) return "Timeline: hook, proof, CTA by 6.8s, hold to 8.0s.";
   return "Timeline: hook, proof/demo, CTA by 10.5s, hold to 12.0s.";
 }
@@ -152,11 +152,11 @@ function buildClipPrompt({ inputs, style_lock, seconds, beat, clip_index, total_
       market ? `Audience: ${market}` : "",
       "",
       `HOOK (concept): ${hook || "(none)"}`,
-      `MICRO-SCRIPT (speak 0.5â€“3.5s): ${script}`,
+      `MICRO-SCRIPT (speak 0.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3.5s): ${script}`,
       `SIMPLE OVERLAY IDEA (do NOT burn in): ${overlay}`,
       "",
       "Continuity lock: same protagonist, outfit, setting, lighting across all 3 clips.",
-      "Stitch buffers: HOLD 0.0â€“0.5s, ACT 0.5â€“3.5s, HOLD 3.5â€“4.0s.",
+      "Stitch buffers: HOLD 0.0ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“0.5s, ACT 0.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“3.5s, HOLD 3.5ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“4.0s.",
       "",
       "Hard rules:",
       "- Vertical 9:16, steady camera, no jump cuts.",
@@ -184,7 +184,7 @@ function buildClipPrompt({ inputs, style_lock, seconds, beat, clip_index, total_
     "- Vertical 9:16, single continuous shot, no jump cuts.",
     "- No burned-in subtitles. Leave top 10% and bottom 15% clear.",
     "",
-    `Beat: ${beat || "hook â†’ proof â†’ CTA"}`,
+    `Beat: ${beat || "hook ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA"}`,
     timelineForSeconds(seconds),
     `End rule: ${endRuleForSeconds(seconds)}`,
   ].join("\n").trim();
@@ -270,17 +270,17 @@ export async function POST(req) {
 
     const beats =
       secondsList.length === 1
-        ? ["hook â†’ proof â†’ CTA"]
+        ? ["hook ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA"]
         : secondsList[1] === 8
-        ? ["hook â†’ setup", "proof â†’ CTA"]
-        : ["hook â†’ setup", "proof â†’ CTA", "proof â†’ CTA"];
+        ? ["hook ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ setup", "proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA"]
+        : ["hook ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ setup", "proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA", "proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA"];
 
     const packSlices = slicePackForDuration(pack, duration);
 
     const clips = secondsList.map((seconds, i) => ({
       clip_index: i,
       seconds,
-      beat: beats[i] || "hook â†’ proof â†’ CTA",
+      beat: beats[i] || "hook ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ proof ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CTA",
       prompt: buildClipPrompt({
         inputs,
         style_lock,

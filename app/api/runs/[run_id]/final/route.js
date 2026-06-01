@@ -1,36 +1,47 @@
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+import { getSession, saveSession } from "@/lib/quiz_store";
 
-import fs from "fs";
-import path from "path";
+function json(data, init = {}) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status: init.status || 200,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init.headers || {}),
+    },
+  });
+}
 
-import { getRunsRoot, mustEnv } from "../../../../../lib/vp_runs.js";
-
-export async function GET(req, { params }) {
+export async function POST(req) {
   try {
-    const cookie = req.headers.get("cookie") || "";
-    if (!cookie.includes("vp_beta=")) {
-      return new Response("Access denied", { status: 401 });
+    const body = await req.json().catch(() => ({}));
+    const sessionId = String(body?.session_id || "").trim();
+
+    if (!sessionId) {
+      return json({ ok: false, error: "Missing session_id" }, { status: 400 });
     }
 
-    // keep env gate consistent with other routes
-    mustEnv("BETA_COOKIE_SECRET");
+    const session = await getSession(sessionId);
 
-    const runId = String(params?.run_id || "").trim();
-    if (!runId) return new Response("Missing run_id", { status: 400 });
+    if (!session) {
+      return json({ ok: false, error: "Session not found" }, { status: 404 });
+    }
 
-    const p = path.join(getRunsRoot(), runId, "assembly", "final.mp4");
-    if (!fs.existsSync(p)) return new Response("Not found", { status: 404 });
-
-    const buf = fs.readFileSync(p);
-    return new Response(buf, {
-      status: 200,
-      headers: {
-        "Content-Type": "video/mp4",
-        "Cache-Control": "no-store",
-      },
+    const updated = await saveSession({
+      ...session,
+      unlocked: true,
+      unlocked_at: new Date().toISOString(),
     });
-  } catch (e) {
-    return new Response(e?.message || String(e), { status: 500 });
+
+    return json({
+      ok: true,
+      result_url: `/result/${updated.session_id}`,
+    });
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        error: error?.message || "Premium unlock failed",
+      },
+      { status: 500 }
+    );
   }
 }

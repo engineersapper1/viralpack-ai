@@ -224,7 +224,7 @@ export default function CopyrightPage() {
         </div>
       </main>
 
-      <footer className="section"><div className="smallNote">Â© {year} ViralPack.ai</div></footer>
+      <footer className="section"><div className="smallNote">Ãƒâ€šÃ‚Â© {year} ViralPack.ai</div></footer>
     </div>
   );
 }

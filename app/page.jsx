@@ -40,11 +40,11 @@ export default function HomePage() {
             />
             <Feature
               title="One-click campaign"
-              body="Enter the website URL and campaign theme. The system studies the client’s voice, colors, and services, then drafts the email."
+              body="Enter the website URL and campaign theme. The system studies the clientÃ¢â‚¬â„¢s voice, colors, and services, then drafts the email."
             />
             <Feature
               title="Send official"
-              body="Use the client’s verified domain through Resend so the email comes from the business, not a random robot cave."
+              body="Use the clientÃ¢â‚¬â„¢s verified domain through Resend so the email comes from the business, not a random robot cave."
             />
           </div>
         </section>
